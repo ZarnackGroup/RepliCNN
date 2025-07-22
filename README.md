@@ -199,8 +199,7 @@ Dominik Stroh, Kathi Zarnack\
 RepliCNN: High-resolution prediction of the spatio-temporal DNA replication program using 1D-CNNs\
 [https://github.com/zarnackgroup/replicnn](https://github.com/zarnackgroup/replicnn)
 
-<summary>BibTex</summary>
-
+BibTex:
 ```bibtex
 @article{replicnn,
     author = {Stroh, Dominik and Zarnack, Kathi},
