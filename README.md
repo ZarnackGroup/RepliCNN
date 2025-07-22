@@ -1,30 +1,16 @@
 # RepliCNN
-<table style="margin: auto; border-collapse: collapse; border: none;">
-  <tr>
-    <td style="text-align: center; vertical-align: middle;"></td>
-    <td style="text-align: center; vertical-align: middle;">
-      <img src="assets/replicnn_logo.png" alt="RepliCNN logo" width="150"/>
-    </td>
-    <td style="text-align: center; vertical-align: middle; border: none;"></td>
-  </tr>
-  <tr>
-    <td style="text-align: center; vertical-align: middle; border: none;">
-      <a href="https://pypi.org/project/replicnn/">
-        <img src="https://img.shields.io/badge/PyPI-v0.1.0-blue" alt="PyPI">
-      </a>
-    </td>
-    <td style="text-align: center; vertical-align: middle; border: none;">
-      <a href="https://github.com/zarnackgroup/replicnn/blob/main/CITATION.cff">
-        <img src="https://img.shields.io/badge/CITE-RepliCNN%20(2025)-blue" alt="Citation">
-      </a>
-    </td>
-    <td style="text-align: center; vertical-align: middle; border: none;">
-      <a href="https://github.com/zarnackgroup/replicnn/blob/main/LICENSE">
-        <img src="https://img.shields.io/badge/license-GPL_3.0-green" alt="License">
-      </a>
-    </td>
-  </tr>
-</table>
+<img src="assets/replicnn_logo.png" alt="RepliCNN logo" width="150">
+    
+<a href="https://pypi.org/project/replicnn/">
+	<img src="https://img.shields.io/badge/PyPI-v0.1.0-blue" alt="PyPI">
+</a>
+<a href="https://github.com/zarnackgroup/replicnn/blob/main/CITATION.cff">
+	<img src="https://img.shields.io/badge/CITE-RepliCNN%20(2025)-blue" alt="Citation">
+</a>
+<a href="https://github.com/zarnackgroup/replicnn/blob/main/LICENSE">
+	<img src="https://img.shields.io/badge/license-GPL_3.0-green" alt="License">
+</a>
+
 RepliCNN is a tool for predicting replication timing from DNA sequence data using convolutional neural networks.
 
 ## Installation
