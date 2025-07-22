@@ -1,0 +1,69 @@
+[build-system]
+requires = [
+	"hatchling",
+	"hatch-vcs",
+]
+
+build-backend = "hatchling.build"
+
+[project]
+name = "replicnn"
+description = "RepliCNN: High-resolution prediction of the spatio-temporal DNA replication program"
+license = "GPL-3.0"
+license-files = ["LICENCE"]
+dynamic = ["version"]
+authors = [
+    {name="Dominik Stroh", email="dominik.stroh@uni-wuerzburg.de"},
+	{name="Kathi Zarnack", email="kathi.zarnack@uni-wuerzburg.de"},
+]
+
+maintainers = [{name="Dominik Stroh", email="dominik.stroh@uni-wuerzburg.de"}]
+
+readme = "README.md"
+classifiers = [
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+	"License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+keywords = [
+	"Replication Timing",
+	"Origin of Replication",
+	"1D CNN",
+]
+
+requires-python = ">=3.10"
+dependencies = [
+    "numpy >=2, <3",
+    "pandas >=2.0, <3",
+    "scipy >=1, <2",
+	"torch >=2, <3",
+	"keras >=3, <4",
+	"statsmodels >=0.10, <1",
+	"scikit-learn >=1, <2",
+	"pybigtools >=0.2.0, <1",
+	"matplotlib >=3.9.2, <4",
+	"seaborn >=0.12.0, <1",
+]
+
+[project.scripts]
+replicnn = "replicnn.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/ZarnackGroup/RepliCNN"
+Issues = "https://github.com/ZarnackGroup/RepliCNN/issues"
+Repository = "https://github.com/ZarnackGroup/RepliCNN.git"
+Source = "https://github.com/ZarnackGroup/RepliCNN"
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.1.0"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/replicnn"]

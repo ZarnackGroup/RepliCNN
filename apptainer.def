@@ -1,0 +1,53 @@
+Bootstrap: docker
+From: python:3.13-slim
+
+%labels
+    org.opencontainers.image.authors "Dominik Stroh <dominik.stroh@uni-wuerzburg.de>, Kathi Zarnack <kathi.zarnack@uni-wuerzburg.de>"
+    org.opencontainers.image.url "https://github.com/ZarnackGroup/RepliCNN"
+    org.opencontainers.image.documentation "https://github.com/ZarnackGroup/RepliCNN"
+    org.opencontainers.image.source "https://github.com/ZarnackGroup/RepliCNN"
+    org.opencontainers.image.licenses "GPLv3"
+    org.opencontainers.image.title "RepliCNN"
+    org.opencontainers.image.description "RepliCNN is a tool for predicting replication timing from DNA sequence data using convolutional neural networks."
+
+%environment
+    export PYTHONDONTWRITEBYTECODE=1
+    export PATH="/opt/replicnn/bin:$PATH"
+
+%post
+    set -eux
+
+    export DEBIAN_FRONTEND=noninteractive
+
+    # Install build dependencies
+    apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Create working dir
+    mkdir -p /app && cd /app
+
+    # Copy and install wheel
+    cp /dist/*.whl .
+    pip install *.whl
+
+	# Smoke tests
+    replicnn --help
+    replicnn --version
+    replicnn train --help
+    replicnn predict --help
+    replicnn analyse --help
+    replicnn quantify --help
+    #replicnn visualise --help
+
+	rm -rf /app /dist /root/.cache
+	apt-get purge -y build-essential
+	apt-get autoremove -y
+	apt-get clean
+	rm -rf /var/lib/apt/lists/*
+
+%files
+    dist/replicnn-*.whl /dist/
+
+%runscript
+    exec replicnn "$@"

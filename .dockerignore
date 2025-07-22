@@ -1,0 +1,11 @@
+# Ignore everything
+**
+
+# Allowed directories
+!src/**/*.py
+
+# Allowed files
+!LICENCE
+!pyproject.toml
+!README.md
+!citation.cff

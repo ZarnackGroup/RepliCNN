@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+title: RepliCNN
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Dominik
+    family-names: Stroh
+    email: dominik.stroh@uni-wuerzburg.de
+    affiliation: >-
+      Department of Bioinformatics,
+      Theodor-Boveri-Institute, Biocenter, University of
+      Würzburg, 97074 Würzburg, Germany
+    orcid: 'https://orcid.org/0000-0003-3285-8629'
+  - given-names: Kathi
+    family-names: Zarnack
+    email: kathi.zarnack@uni-wuerzburg.de
+    affiliation: >-
+      Department of Bioinformatics,
+      Theodor-Boveri-Institute, Biocenter, University of
+      Würzburg, 97074 Würzburg, Germany
+    orcid: 'https://orcid.org/0000-0003-3527-3378'
+repository-code: 'https://github.com/ZarnackGroup/RepliCNN'
+url: 'https://github.com/ZarnackGroup/RepliCNN'
+repository-artifact: >-
+  https://github.com/ZarnackGroup/RepliCNN/pkgs/container/replicnn
+abstract: >-
+  RepliCNN is a tool for predicting replication timing from
+  DNA sequence data using convolutional neural networks.
+keywords:
+  - bioinformatics
+  - replication-timing
+  - convolutional-neural-network
+  - origin-of-replication
+  - python
+license: GPL-3.0
