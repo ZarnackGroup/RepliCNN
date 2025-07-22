@@ -1,5 +1,4 @@
-# RepliCNN
-<img src="assets/replicnn_logo.png" alt="RepliCNN logo" width="150">
+# RepliCNN <a href="https://github.com/zarnackgroup/replicnn"><img src="assets/replicnn_logo.png" alt="RepliCNN logo" align="right" width="130"/></a>
     
 <a href="https://pypi.org/project/replicnn/">
 	<img src="https://img.shields.io/badge/PyPI-v0.1.0-blue" alt="PyPI">
@@ -10,8 +9,11 @@
 <a href="https://github.com/zarnackgroup/replicnn/blob/main/LICENSE">
 	<img src="https://img.shields.io/badge/license-GPL_3.0-green" alt="License">
 </a>
+<a href="https://www.python.org/">
+	<img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue" alt="Python">
+</a>
 
-RepliCNN is a tool for predicting replication timing from DNA sequence data using convolutional neural networks.
+RepliCNN is a tool for predicting replication timing from GLOE-Seq, TrAEL-Seq, or OK-Seq data using convolutional neural networks.
 
 ## Installation
 We recommend installing RepliCNN via the PyPI using pip:
@@ -201,6 +203,9 @@ user@dev:/tmp$ python -c "import replicnn; print(replicnn.__version__)"
 
 ## Getting help
 If you've found a bug, would like to suggest a new feature or you have any issues regarding RepliCNN installation, walkthrough, and output interpretation please open a new [issue](https://github.com/zarnackgroup/replicnn/issues).
+
+## Acknowledgements
+Funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) – Project-ID 393547839 – SFB 1361.
 
 ## Citing
 If you use RepliCNN in your research, please cite this repository like this:
