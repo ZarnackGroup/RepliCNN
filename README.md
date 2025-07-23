@@ -21,6 +21,10 @@ You can install RepliCNN from source via:
 ```bash
 pip install 'replicnn @ git+https://github.com/zarnackgroup/replicnn.git@main'
 ```
+or
+```bash
+pip install 'replicnn @ git+ssh://git@github.com/zarnackgroup/replicnn.git@main'
+```
 </details>
 
 <details>

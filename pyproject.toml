@@ -63,7 +63,7 @@ Source = "https://github.com/ZarnackGroup/RepliCNN"
 
 [tool.hatch.version]
 source = "vcs"
-fallback-version = "0.1.0"
+fallback-version = "unknown"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/replicnn"]
