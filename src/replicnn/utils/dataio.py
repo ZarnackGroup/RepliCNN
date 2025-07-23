@@ -119,7 +119,7 @@ def load_bwa(path:str, score:str="score", log:bool=False) -> pd.DataFrame:
 	bwa["chromosome"]: pd.DataFrame = bwa.chromosome.astype(str)
 	bwa["start"]: pd.DataFrame = bwa.start.astype(int)
 	bwa["end"]: pd.DataFrame = bwa.end.astype(int)
-	bwa[score]: pd.DataFrame = bwa[score].astype(float)+1
+	bwa[score]: pd.DataFrame = bwa[score].astype(float)
 
 	return bwa
 
@@ -225,6 +225,7 @@ def save_model(model:keras.src.models.sequential.Sequential, path:str, log:bool=
 	
 	if log: logger.info(f"Saving model to: {path}.keras")
 	os.makedirs(os.path.dirname(path),exist_ok=True)
+	if not path.endswith("/"): path += "/"
 	model.save(f"{path}.keras")
 	
 	return None

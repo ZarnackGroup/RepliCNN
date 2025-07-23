@@ -30,10 +30,12 @@ import sys
 import typing
 import logging
 import random
+import string
 
 import pandas as pd
 import numpy as np
 import scipy
+import pybigtools
 
 from .utils.dataio import load_chromsizes, load_bwa, load_bg, save_dataframe
 from .utils.logger import get_logger
@@ -85,6 +87,9 @@ def prepare(
 	) -> pd.DataFrame:
 	"""This module takes the user input data and writes a standardised format for this toolbox."""
 
+	# assign random run id
+	run_id = "".join(random.SystemRandom().choice(string.ascii_letters + string.digits) for _ in range(10))
+
 	# Convert invert to value
 	if (log and invert): logger.info("Inverting features.")
 	phase = -1 if invert else 1
@@ -93,16 +98,25 @@ def prepare(
 	bins = create_bins(chromsizes=chromsizes,binsize=binsize,log=log)
 
 	# write bins to bed4 file
-	save_dataframe(dataframe=bins, path="bins.bed4", log=log)
+	save_dataframe(dataframe=bins, path=f"./{run_id}_bins.bed4", log=log)
 
 	# run bigWigAverageOverBed
-	for strand, path in zip(["pos", "neg"],[path_fwd, path_rev]):
-		command: str = f"bigWigAverageOverBed {path} bins.bed4 {strand}.tsv"
-		run_command(command=command, log=log)
+	# for strand, path in zip(["pos", "neg"],[path_fwd, path_rev]):
+	# 	command: str = f"bigWigAverageOverBed {path} bins.bed4 {strand}.tsv"
+	# 	run_command(command=command, log=log)
+
+	for strand, path in zip(["pos", "neg"], [path_fwd, path_rev]):
+		bw = pybigtools.open(path, mode="r")
+		results = bw.average_over_bed(f"./{run_id}_bins.bed4", names=False, stats="all")
+
+		with open(f"./{run_id}_{strand}.tsv", "w") as out:
+			for name, stat in results:
+				# This matches: name, size, covered, <score>, mean0, mean
+				out.write(f"{name}\t{stat.size}\t{stat.bases}\t{stat.sum:.3f}\t{stat.mean0:.5f}\t{stat.mean:.5f}\n")
 
 	# load log2.bg, pos.bg and neg.bg
-	pos: pd.DataFrame = load_bwa(path="pos.tsv", score="pos", log=log)
-	neg: pd.DataFrame = load_bwa(path="neg.tsv", score="neg", log=log)
+	pos: pd.DataFrame = load_bwa(path=f"./{run_id}_pos.tsv", score="pos", log=log)
+	neg: pd.DataFrame = load_bwa(path=f"./{run_id}_neg.tsv", score="neg", log=log)
 
 	# subset for chosen chromosomes
 	pos: pd.DataFrame = pos.query("chromosome in @chromsizes.chromosome").reset_index(drop=True)
@@ -114,7 +128,7 @@ def prepare(
 	neg: pd.DataFrame = neg.assign(order=neg.chromosome.map(order)).sort_values(by=["order","start"]).drop(columns="order").reset_index(drop=True)
 
 	# remove temporary files
-	rm_command: str = f"rm ./pos.tsv ./neg.tsv ./bins.bed4"
+	rm_command: str = f"rm ./{run_id}_pos.tsv ./{run_id}_neg.tsv ./{run_id}_bins.bed4"
 	run_command(command=rm_command, log=log)
 
 	# initialise arrays to store values
