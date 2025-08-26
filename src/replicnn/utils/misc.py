@@ -30,6 +30,7 @@ import sys
 import typing
 import logging
 import random
+import subprocess
 
 import pandas as pd
 import numpy as np
@@ -138,22 +139,26 @@ def create_bins(chromsizes:pd.DataFrame, binsize:int, log:bool=False) -> pd.Data
 		
 	return bins
 
-def get_free_gpu(log:bool=False) -> int:
-	"""Get the GPU with the least power consumption."""
+def get_free_gpu(log: bool = False) -> int:
+    """Return the ID of the GPU with the least memory usage (in MB)."""
 
-	# get average power readings from the available gpus and write to temporary file
-	os.system("nvidia-smi -q -d POWER | grep Avg > ./tmp")
+	# Get GPU memory usage in MB
+	result = subprocess.run(
+		"nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits",
+		shell=True,
+		check=True,
+		capture_output=True,
+		text=True
+	)
+	# Parse memory usage values
+	mem_used = [int(x) for x in result.stdout.splitlines()]
 
-	# split readings
-	least_power_usage: list[float] = [float(x.split()[2]) for x in open("tmp", "r").readlines()]
+	if log:
+		for idx, mem in enumerate(mem_used):
+			print(f"GPU {idx}: {mem} MB used")
 
-	# remove temporary file
-	run_command("rm ./tmp")
-
-	# return id of gpu with least power consumption
-	gpu: int = np.argmin(least_power_usage)
-
-	return gpu
+	# Return GPU with least memory usage
+	return int(np.argmin(mem_used))
 
 def get_sign_switch_locations(sdf:pd.DataFrame, mode:str, smoothing_factor:int=3, log:bool=False) -> pd.DataFrame:
 	"""Detects sign switches in a vector. Sign switches are usually indications for replication starting or ending."""
