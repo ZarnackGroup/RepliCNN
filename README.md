@@ -33,15 +33,15 @@ pip install 'replicnn @ git+ssh://git@github.com/zarnackgroup/replicnn.git@main'
 You can also use RepliCNN as a Docker/Singularity/Apptainer container. We provide pre-built containers as well as Dockerfiles and Singularity/Apptainer definition files. Ensure that you have Docker/Singularity/Apptainer available in your PATH.
 ```bash
 # Using Docker
-user@dev:/tmp$ docker run ghcr.io/zarnackgroup/replicnn:0.1.0 --version
+user@dev:/tmp$ docker run docker://ghcr.io/zarnackgroup/replicnn:0.1.0 --version
 0.1.0
 
 # Using Singularity
-user@dev:/tmp$ singularity run ghcr.io/zarnackgroup/replicnn:0.1.0 --version
+user@dev:/tmp$ singularity run docker://ghcr.io/zarnackgroup/replicnn:0.1.0 --version
 0.1.0
 
 # Using Apptainer
-user@dev:/tmp$ apptainer run ghcr.io/zarnackgroup/replicnn:0.1.0 --version
+user@dev:/tmp$ apptainer run docker://ghcr.io/zarnackgroup/replicnn:0.1.0 --version
 0.1.0
 ```
 </details>

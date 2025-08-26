@@ -309,10 +309,9 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 		
 	return None
 
-try:
-	# log start of program
-	logger.info("Started RepliCNN!")
-	main()
-finally:
-	# log end of program
-	logger.info("Ended RepliCNN!")
+def main_wrapper():
+    logger.info("Started RepliCNN!")
+    try:
+        main()
+    finally:
+        logger.info("Ended RepliCNN!")
