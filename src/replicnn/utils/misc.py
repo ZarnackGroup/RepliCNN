@@ -140,7 +140,7 @@ def create_bins(chromsizes:pd.DataFrame, binsize:int, log:bool=False) -> pd.Data
 	return bins
 
 def get_free_gpu(log: bool = False) -> int:
-    """Return the ID of the GPU with the least memory usage (in MB)."""
+	"""Return the ID of the GPU with the least memory usage (in MB)."""
 
 	# Get GPU memory usage in MB
 	result = subprocess.run(
