@@ -223,10 +223,10 @@ def save_analyse_log(analyse_log:None, path:str, log:bool=False) -> None:
 def save_model(model:keras.src.models.sequential.Sequential, path:str, log:bool=False) -> None:
 	"""Saves the model to the given path."""
 	
-	if log: logger.info(f"Saving model to: {path}.keras")
 	os.makedirs(os.path.dirname(path),exist_ok=True)
 	if not path.endswith("/"): path += "/"
-	model.save(f"{path}.keras")
+	if log: logger.info(f"Saving model to: {path}model.keras")
+	model.save(f"{path}model.keras")
 	
 	return None
 
