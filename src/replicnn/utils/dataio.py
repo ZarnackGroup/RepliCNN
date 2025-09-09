@@ -211,27 +211,49 @@ def save_bigwig(dataframes: Dict[str, pd.DataFrame], chroms: Dict[str, int], pat
 	"""
 	if log: logger.info(f"Saving bigwig to: {path}")
 	abs_path = os.path.abspath(path)
-	dirname: str = os.path.dirname(abs_path)
-	os.makedirs(dirname, exist_ok=True)
+	os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+	if log:
+		print(f"Saving bigwig to: {abs_path}")
 
-	with pyBigWig.open(path, "w") as bw:
+	with pyBigWig.open(abs_path, "w") as bw:
+		# Add header
 		bw.addHeader(list(chroms.items()))
+
 		for chrom, df in dataframes.items():
 			if df.empty:
 				continue
-			n = len(df)
-			if len(df["start"]) != n or len(df["end"]) != n or len(df["score"]) != n:
-				raise ValueError(f"Mismatched lengths for chrom {chrom}")
 
-			# check BigWig requirements
-			if (df["end"] <= df["start"]).any():
-				raise ValueError(f"Found end <= start in chrom {chrom}")
+			# Ensure numeric types
+			df = df.fillna(0)
+			df["start"] = df["start"].astype(int)
+			df["end"] = df["end"].astype(int)
+			df["score"] = df["score"].astype(float)
+
+			# Keep only valid entries
+			df_valid = df[df["end"] > df["start"]]
+			if df_valid.empty:
+				continue
+
+			starts = df_valid["start"].tolist()
+			ends = df_valid["end"].tolist()
+			scores = df_valid["score"].tolist()
+
+			# Chrom column
+			chroms_col = df_valid["chrom"].tolist() if "chrom" in df_valid.columns else [chrom] * len(df_valid)
+
+			# pyBigWig strict: lengths must match
+			if not (len(starts) == len(ends) == len(scores) == len(chroms_col)):
+				raise ValueError(f"Mismatched lengths for chromosome {chrom}")
+
+			# Add entries
 			bw.addEntries(
-				chrom=df["chrom"].tolist() if "chrom" in df.columns else [chrom]*len(df),
-				starts=df["start"].tolist(),
-				ends=df["end"].tolist(),
-				values=df["score"].tolist()
+				chrom=chroms_col,
+				starts=starts,
+				ends=ends,
+				values=scores
 			)
+
+	return None
 
 def save_train_history(history:keras.src.callbacks.history.History, path:str, log:bool=False) -> None:
 	"""Saves the log-file from the train module to the given path."""
