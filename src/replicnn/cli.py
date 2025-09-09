@@ -305,7 +305,7 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 	## module 3: rfd_oem
 	elif args.command == "rfd_oem":
 		try:
-			logger.info("Started RepliCNN analyse!")
+			logger.info("Started RepliCNN rfd_oem!")
 			from .rfd_oem import _rfd_oem  # import your _rfd_oem function
 			_rfd_oem(
 				watson_bw=args.watson,
@@ -319,7 +319,7 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 				invert=args.invert,
 			)
 		finally:
-			logger.info("Ended RepliCNN analyse!")
+			logger.info("Ended RepliCNN rfd_oem!")
 
 	## module 4: quantify
 	elif args.command == "quantify":
