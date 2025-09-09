@@ -24,7 +24,6 @@ if __name__=="__main__":
 	raise RuntimeError("This script cannot be run directly. Please import it as a module.")
 
 # import packages
-from __future__ import annotations
 import os
 import shutil
 import sys
