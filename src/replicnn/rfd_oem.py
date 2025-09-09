@@ -36,7 +36,7 @@ import pandas as pd
 import numpy as np
 import pyBigWig
 
-from .utils.dataio import save_dataframe
+from .utils.dataio import save_dataframe, save_bigwig
 from .utils.logger import get_logger
 
 # set seeds for reproducibility
@@ -111,17 +111,9 @@ def _rfd_oem(
 		all_df = pd.concat(results.values(), ignore_index=True)
 		all_df = all_df.sort_values(by=["chrom", "start"])
 		save_dataframe(all_df, outfile)
-
 	else:
-		with pyBigWig.open(outfile, "w") as bw:
-			bw.addHeader(list(chroms.items()))
-			for df in results.values():
-				bw.addEntries(
-					df["chrom"].tolist(),
-					df["start"].tolist(),
-					ends=df["end"].tolist(),
-					values=df["score"].tolist(),
-				)
+		save_bigwig(results, chroms, outfile)
+		
 	return None
 
 def rle_encode_coords(values: np.ndarray, coords: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:

@@ -195,12 +195,32 @@ def save_dataframe(dataframe:pd.DataFrame, path:str, log:bool=False) -> None:
 	"""Saves the dataframe to the given path."""
 	
 	if log: logger.info(f"Saving dataframe to: {path}")
-	dirname: str = os.path.dirname(path)
-	dirname: str = dirname if dirname else "./"
-	os.makedirs(dirname,exist_ok=True)
+	
+	abs_path = os.path.abspath(path)
+	dirname: str = os.path.dirname(abs_path)
+	os.makedirs(dirname, exist_ok=True)
 	dataframe.to_csv(path, sep="\t", header=None, index=False, encoding="utf-8", lineterminator="\n", decimal=".")
 	
 	return None
+
+def save_bigwig(dataframes: Dict[str, pd.DataFrame], chroms: Dict[str, int], path: str, log:bool=False) -> None:
+	"""
+	Saves a dictionary of DataFrames to a BigWig file.
+	"""
+	if log: logger.info(f"Saving bigwig to: {path}")
+	abs_path = os.path.abspath(path)
+	dirname: str = os.path.dirname(abs_path)
+	os.makedirs(dirname, exist_ok=True)
+
+	with pyBigWig.open(path, "w") as bw:
+		bw.addHeader(list(chroms.items()))
+		for chrom, df in dataframes.items():
+			bw.addEntries(
+				chrom=df["chrom"].tolist() if "chrom" in df.columns else [chrom]*len(df),
+				starts=df["start"].tolist(),
+				ends=df["end"].tolist(),
+				values=df["score"].tolist()
+			)
 
 def save_train_history(history:keras.src.callbacks.history.History, path:str, log:bool=False) -> None:
 	"""Saves the log-file from the train module to the given path."""
