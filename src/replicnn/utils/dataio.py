@@ -217,6 +217,15 @@ def save_bigwig(dataframes: Dict[str, pd.DataFrame], chroms: Dict[str, int], pat
 	with pyBigWig.open(path, "w") as bw:
 		bw.addHeader(list(chroms.items()))
 		for chrom, df in dataframes.items():
+			if df.empty:
+				continue
+			n = len(df)
+			if len(df["start"]) != n or len(df["end"]) != n or len(df["score"]) != n:
+				raise ValueError(f"Mismatched lengths for chrom {chrom}")
+
+			# check BigWig requirements
+			if (df["end"] <= df["start"]).any():
+				raise ValueError(f"Found end <= start in chrom {chrom}")
 			bw.addEntries(
 				chrom=df["chrom"].tolist() if "chrom" in df.columns else [chrom]*len(df),
 				starts=df["start"].tolist(),
