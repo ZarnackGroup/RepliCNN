@@ -139,26 +139,69 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 
 	# create subparser for module 3: analyse
 	## parser
-	analyse_parser: argparse.ArgumentParser = subparsers.add_parser("analyse", 
-																	help="Analyse data for characteristics.", 
-																	description="RepliCNN analyse - Analyse a SDF-file for origins of rpelication/initiation zones, termination zones, constant timing regions, timing transition regions, and replication for directionality.",
-																	)
+	rfd_oem_parser: argparse.ArgumentParser = subparsers.add_parser(
+		"rfd_oem",
+		help="Compute RFD or OEM tracks from Watson/Crick BigWig files.",
+		description=(
+			"RepliCNN analyse - Compute replication fork directionality (RFD) or origin efficiency metric (OEM) "
+			"from strand-specific BigWig files and write the results as BigWig or bedGraph."
+		),
+	)
 	## arguments
-	analyse_parser.add_argument("-i", "--input", 
-								help="Path(-s) to one sdf file.", 
-								type=str, nargs=1, required=True)
-	analyse_parser.add_argument("-o", "--outpath", 
-								help="Folder where the output should be written to.", 
-								type=str, nargs=1, required=True)
-	analyse_parser.add_argument("-s1", "--smoothlog2", 
-								help="Smoothing factor for ORI and TERM identification.", 
-								type=str, nargs=1)																
-	analyse_parser.add_argument("-s2", "--smoothrfd", 
-								help="Smoothing factor for TTR and RFD identification", 
-								type=str, nargs=1)
-	analyse_parser.add_argument("-nl", "--nolog", 
-								help="Disable logging.", 
-								action="store_false")	
+	rfd_oem_parser.add_argument(
+		"-w", "--watson",
+		help="Path to Watson strand BigWig file.",
+		type=str,
+		required=True
+	)
+	rfd_oem_parser.add_argument(
+		"-c", "--crick",
+		help="Path to Crick strand BigWig file.",
+		type=str,
+		required=True
+	)
+	rfd_oem_parser.add_argument(
+		"-cs", "--chromsizes",
+		help="Path to chromosome sizes file.",
+		type=str,
+		required=True
+	)
+	rfd_oem_parser.add_argument(
+		"-o", "--output_prefix",
+		help="Prefix for output file(s).",
+		type=str,
+		required=True
+	)
+	rfd_oem_parser.add_argument(
+		"-res", "--resolution",
+		help="Window size in bp.",
+		type=int,
+		required=True
+	)
+	rfd_oem_parser.add_argument(
+		"-st", "--stride",
+		help="Stride (step size in bp).",
+		type=int,
+		required=True
+	)
+	rfd_oem_parser.add_argument(
+		"-t", "--track",
+		help="Track to compute: 'rfd' or 'oem'.",
+		type=str,
+		choices=["rfd", "oem"],
+		required=True
+	)
+
+	rfd_oem_parser.add_argument(
+		"-bg", "--bedgraph",
+		help="Write output as bedGraph instead of BigWig.",
+		action="store_true"
+	)
+	rfd_oem_parser.add_argument(
+		"-inv", "--invert",
+		help="Swap Watson/Crick signals.",
+		action="store_true"
+	)
 
 	# create subparser for module 4: quantify
 	## parser
@@ -259,17 +302,21 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 		finally:
 			logger.info("Ended RepliCNN predict!")
 
-	## module 3: analyse
-	elif args.command == "analyse":
+	## module 3: rfd_oem
+	elif args.command == "rfd_oem":
 		try:
 			logger.info("Started RepliCNN analyse!")
-			from .analyse import _analyse
-			_analyse(
-				path_sdf = args.input[0],
-				path_out = args.outpath[0],
-				smoothing_factor_log2 = args.smoothlog2[0] if args.smoothlog2 else "",
-				smoothing_factor_rfd = args.smoothrfd[0] if args.smoothrfd else "",
-				log = args.nolog,
+			from .rfd_oem import _rfd_oem  # import your _rfd_oem function
+			_rfd_oem(
+				watson_bw=args.watson,
+				crick_bw=args.crick,
+				chrom_sizes_file=args.chromsizes,
+				resolution=args.resolution,
+				stride=args.stride,
+				output_prefix=args.output_prefix,
+				track=args.track,
+				bedgraph=args.bedgraph,
+				invert=args.invert,
 			)
 		finally:
 			logger.info("Ended RepliCNN analyse!")

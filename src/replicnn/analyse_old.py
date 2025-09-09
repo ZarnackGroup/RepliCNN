@@ -24,24 +24,23 @@ if __name__=="__main__":
 	raise RuntimeError("This script cannot be run directly. Please import it as a module.")
 
 # import packages
-from __future__ import annotations
 import os
 import shutil
 import sys
 import typing
 import logging
 import random
-from collections import defaultdict
 
 import pandas as pd
 import numpy as np
-from scipy.signal import argrelextrema
-from scipy.interpolate import UnivariateSpline
-import pyBigWig
+import scipy
+
+import string
+from sklearn.mixture import GaussianMixture
 
 from .utils.dataio import load_sdf, save_dataframe
 from .utils.logger import get_logger
-from .utils.analyse_helper import compute_rfd_oem, create_raw_candidates_rfd_oem, merge_candidates, filter_merged_candidates_by_evidence, recenter_candidates_to_oem_extrema, quantify_ori_term_efficiency_from_bw, filter_efficiency_candidates
+from .utils.misc import moving_average, get_sign_switch_locations, find_contiguous_regions
 
 # set seeds for reproducibility
 seed = 42
