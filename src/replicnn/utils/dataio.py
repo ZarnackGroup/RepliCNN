@@ -247,11 +247,11 @@ def save_bigwig(dataframes: Dict[str, pd.DataFrame], chroms: Dict[str, int], pat
 
 			# Add entries
 			bw.addEntries(
-				chrom=chroms_col,
-				starts=starts,
-				ends=ends,
-				values=scores
-			)
+                chrom=df["chrom"].tolist() if "chrom" in df.columns else [chrom]*len(df),
+                starts=df["start"].astype(int).tolist(),
+                ends=df["end"].astype(int).tolist(),
+                values=df["score"].astype(float).tolist()
+            )
 
 	return None
 
