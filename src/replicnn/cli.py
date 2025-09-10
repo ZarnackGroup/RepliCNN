@@ -203,6 +203,90 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 		action="store_true"
 	)
 
+	# create subparser for module 3: analyse
+	## parser
+	ori_ter_parser: argparse.ArgumentParser = subparsers.add_parser(
+		"ori_ter",
+		help="Detect replication origins (ORI) and termination zones (TER) from RFD/OEM tracks.",
+		description=(
+			"RepliCNN ori_ter - Detect ORI and TER zones, timing transition regions, and "
+			"constant timing regions based on RFD/OEM tracks."
+		),
+	)
+
+	## arguments
+	ori_ter_parser.add_argument(
+    "-i", "--input",
+    help="Path(s) to RFD/OEM BigWig files.",
+    type=str,
+    nargs="+",
+    required=True
+	)
+	ori_ter_parser.add_argument(
+		"-cs", "--chromsizes",
+		help="Path to chromosome sizes file.",
+		type=str,
+		required=True
+	)
+	ori_ter_parser.add_argument(
+		"-o", "--output_prefix",
+		help="Prefix for output file(s).",
+		type=str,
+		required=True
+	)
+	ori_ter_parser.add_argument(
+		"-si", "--save_intermediates",
+		help="Save intermediate candidate and filtering files.",
+		action="store_true"
+	)
+	ori_ter_parser.add_argument(
+		"-nl", "--nolog",
+		help="Disable debug logging.",
+		action="store_false"
+	)
+	ori_ter_parser.add_argument(
+		"--ori-threshold",
+		help="Threshold for ORI recentering.",
+		type=float,
+		default=0.05
+	)
+	ori_ter_parser.add_argument(
+		"--ter-threshold",
+		help="Threshold for TER recentering.",
+		type=float,
+		default=0.15
+	)
+	ori_ter_parser.add_argument(
+		"--window-radius",
+		help="Window radius (bp) for recentering around OEM extrema.",
+		type=int,
+		default=15000
+	)
+	ori_ter_parser.add_argument(
+		"--max-merge-size",
+		help="Maximum size (bp) for merging candidate regions.",
+		type=int,
+		default=15000
+	)
+	ori_ter_parser.add_argument(
+		"--n-evidence",
+		help="Minimum number of supporting evidences for a candidate.",
+		type=int,
+		default=2
+	)
+	ori_ter_parser.add_argument(
+		"--smooth-factor-base",
+		help="Smoothing factor for raw candidate generation.",
+		type=float,
+		default=1e-3
+	)
+	ori_ter_parser.add_argument(
+		"--cutoff",
+		help="Cutoff for filtering efficiency scores.",
+		type=int,
+		default=15
+	)
+
 	# create subparser for module 4: quantify
 	## parser
 	quantify_parser: argparse.ArgumentParser = subparsers.add_parser("quantify", 
@@ -321,7 +405,29 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 		finally:
 			logger.info("Ended RepliCNN rfd_oem!")
 
-	## module 4: quantify
+	## module 4: ori_ter
+	elif args.command == "ori_ter":
+    try:
+        logger.info("Started RepliCNN ori_ter!")
+        from .ori_ter import _ori_ter  # import your _ori_ter function
+        _ori_ter(
+            input_files=args.input,
+            output_prefix=args.output_prefix,
+            chrom_sizes_file=args.chromsizes,
+            save_intermediates=args.save_intermediates,
+            log=args.nolog,
+            ori_threshold=args.ori_threshold,
+            ter_threshold=args.ter_threshold,
+            window_radius=args.window_radius,
+            max_merge_size=args.max_merge_size,
+            n_evidence=args.n_evidence,
+            smooth_factor_base=args.smooth_factor_base,
+            cutoff=args.cutoff,
+        )
+    finally:
+        logger.info("Ended RepliCNN ori_ter!")
+
+	## module 5: quantify
 	elif args.command == "quantify":
 		try:
 			logger.info("Started RepliCNN quantify!")
@@ -337,7 +443,7 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 		finally:
 			logger.info("Ended RepliCNN quantify!")
 
-	# ## module 5: visualise
+	# ## module 6: visualise
 	# elif args.command == "visualise":
 	# 	raise NotImplementedError("This function is not implemented yet. Please be patient.")
 	# 	try:

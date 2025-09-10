@@ -54,54 +54,55 @@ random.seed(seed)
 logger: logging.Logger = get_logger(level=logging.DEBUG)
 
 def create_raw_candidates_rfd_oem(
+    input_files: List[str],
     out_prefix: str,
-    resolutions: List[int],
-    chrom_sizes_file: str,
-    stride: int,
-    out_bed: str = "candidates_rfd_oem_raw.bed",
+    chrom_sizes: Dict[str, int],
+    out_bed: Optional[str] = None,
     smooth_factor_base: float = 1e-3,
-    valid_chroms: Optional[List[str]] = None,
 ) -> Dict[str, List[Tuple[str, int, int, str, float, float, int]]]:
     """
     Identify raw replication origin (ORI) and termination (TER) candidates
     using both RFD (replication fork directionality) and OEM (origin efficiency metric).
 
-    Candidate tuple format:
+    Input filenames must follow the convention:
+        id_{rfd|oem}_{stride}_{resolution}.bw
+
+    Candidate tuple format (in memory):
         (chrom, start, end, name, rfd_score, oem_score, resolution)
+
+    File output (if out_bed is set):
+        BED4 -> chrom, start, end, name
     """
 
-    # ---- LOAD CHROM SIZES ----
-    chroms: Dict[str, int] = {}
-    with open(chrom_sizes_file) as f:
-        for line in f:
-            chrom, size = line.strip().split()
-            if valid_chroms is None or chrom in valid_chroms:
-                chroms[chrom] = int(size)
+    # Parse metadata from filenames
+    file_info = []
+    for f in input_files:
+        fname = os.path.basename(f)
+        match = re.match(r".*_(rfd|oem)_(\d+)_(\d+)\.bw$", fname)
+        if not match:
+            raise ValueError(f"Input file name does not match pattern: {fname}")
+        track, stride, resolution = match.groups()
+        file_info.append({
+            "path": f,
+            "track": track.lower(),
+            "stride": int(stride),
+            "resolution": int(resolution),
+        })
 
     raw_candidates: List[Tuple[str, int, int, str, float, float, int]] = []
+    candidates: Dict[str, List[Tuple[str, int, int, str, float, float, int]]] = {chrom: [] for chrom in chrom_sizes}
 
-    # --- collect OEM data for all resolutions ---
-    oem_data: Dict[int, Dict[str, np.ndarray]] = {w: {} for w in resolutions}
-    for win in resolutions:
-        with pyBigWig.open(f"{out_prefix}_OEM_{win}bp.bw") as oem_bw:
-            for chrom, size in chroms.items():
-                oem_vals = np.nan_to_num(oem_bw.values(chrom, 0, size, numpy=True))[::stride]
-                oem_data[win][chrom] = oem_vals
+    # Separate RFD and OEM files
+    rfd_files = [f for f in file_info if f["track"] == "rfd"]
+    oem_files = [f for f in file_info if f["track"] == "oem"]
 
     # --- helper: find RFD candidates ---
-    def find_rfd_candidates(
-        chrom: str,
-        pos: np.ndarray,
-        rfd: np.ndarray,
-        oem_dict: Dict[int, np.ndarray],
-        win: int,
-    ) -> List[Tuple[str, int, int, str, float, float, int]]:
-        """Find RFD-based ORI/TER candidates via spline sign switches."""
-        candidates: List[Tuple[str, int, int, str, float, float, int]] = []
+    def find_rfd_candidates(chrom, pos, rfd, oem_dict, win, stride) -> List[Tuple]:
+        cands: List[Tuple] = []
         rfd = np.nan_to_num(rfd)
 
         if len(pos) < 5:
-            return candidates
+            return cands
 
         smooth = smooth_factor_base * len(pos)
         spline = UnivariateSpline(pos, rfd, s=smooth)
@@ -113,16 +114,14 @@ def create_raw_candidates_rfd_oem(
 
         for i in switch_idx:
             rfd_val = float(rfd_fine[i])
-            coord = x_fine[i]  # genomic coordinate
+            coord = x_fine[i]
 
-            # Map genomic coordinate to stride-based index
+            # Map coordinate into OEM values
             oem_vals = []
-            for w in resolutions:
-                if w in oem_dict:
-                    arr = oem_dict[w]
-                    idx = coord // stride
-                    if idx < len(arr):
-                        oem_vals.append(arr[int(idx)])
+            for w, arr in oem_dict.items():
+                idx = coord // stride
+                if idx < len(arr):
+                    oem_vals.append(arr[int(idx)])
             if not oem_vals:
                 continue
 
@@ -130,19 +129,13 @@ def create_raw_candidates_rfd_oem(
             name = f"{'ORI' if rfd_val < 0 else 'TER'}_RFD_{win}"
             cand = (chrom, int(coord), int(coord) + 1, name, rfd_val, oem_val, win)
             raw_candidates.append(cand)
-            candidates.append(cand)
+            cands.append(cand)
 
-        return candidates
+        return cands
 
     # --- helper: find OEM candidates ---
-    def find_oem_candidates(
-        chrom: str,
-        pos: np.ndarray,
-        oem: np.ndarray,
-        win: int,
-    ) -> List[Tuple[str, int, int, str, float, float, int]]:
-        """Find OEM-based ORI/TER candidates via local extrema in smoothed spline."""
-        candidates: List[Tuple[str, int, int, str, float, float, int]] = []
+    def find_oem_candidates(chrom, pos, oem, win) -> List[Tuple]:
+        cands: List[Tuple] = []
         oem = np.nan_to_num(oem)
 
         smooth = smooth_factor_base * len(pos)
@@ -156,46 +149,66 @@ def create_raw_candidates_rfd_oem(
         for i in maxima:
             val = float(oem_fine[i])
             if val <= 0:
-                continue  # require positive maxima for ORI
+                continue
             coord = x_fine[i]
             name = f"ORI_OEM_{win}"
             cand = (chrom, int(coord), int(coord) + 1, name, 0.0, val, win)
             raw_candidates.append(cand)
-            candidates.append(cand)
+            cands.append(cand)
 
         for i in minima:
             val = float(oem_fine[i])
             if val >= 0:
-                continue  # require negative minima for TER
+                continue
             coord = x_fine[i]
             name = f"TER_OEM_{win}"
             cand = (chrom, int(coord), int(coord) + 1, name, 0.0, val, win)
             raw_candidates.append(cand)
-            candidates.append(cand)
+            cands.append(cand)
 
-        return candidates
+        return cands
 
-    # --- collect candidates ---
-    candidates: Dict[str, List[Tuple[str, int, int, str, float, float, int]]] = {chrom: [] for chrom in chroms}
-    for win in resolutions:
-        with pyBigWig.open(f"{out_prefix}_RFD_{win}bp.bw") as rfd_bw:
-            for chrom, size in chroms.items():
+    # --- preload OEM signals ---
+    oem_data: Dict[int, Dict[str, np.ndarray]] = {}
+    for f in oem_files:
+        win = f["resolution"]
+        stride = f["stride"]
+        oem_data[win] = {}
+        with pyBigWig.open(f["path"]) as bw:
+            for chrom, size in chrom_sizes.items():
+                oem_vals = np.nan_to_num(bw.values(chrom, 0, size, numpy=True))[::stride]
+                oem_data[win][chrom] = oem_vals
+
+    # --- collect candidates per RFD file ---
+    for f in rfd_files:
+        win = f["resolution"]
+        stride = f["stride"]
+        with pyBigWig.open(f["path"]) as bw:
+            for chrom, size in chrom_sizes.items():
                 pos = np.arange(0, size, stride)
-                rfd_vals = np.nan_to_num(rfd_bw.values(chrom, 0, size, numpy=True))[::stride]
-                oem_vals = oem_data[win][chrom]
+                rfd_vals = np.nan_to_num(bw.values(chrom, 0, size, numpy=True))[::stride]
 
-                # RFD-based candidates
-                candidates[chrom].extend(
-                    find_rfd_candidates(chrom, pos, rfd_vals, {w: oem_data[w][chrom] for w in resolutions}, win)
-                )
+                # Use OEMs for same chrom
+                oem_dict = {w: arr[chrom] for w, arr in oem_data.items() if chrom in arr}
 
-                # OEM-based candidates
+                candidates[chrom].extend(find_rfd_candidates(chrom, pos, rfd_vals, oem_dict, win, stride))
+
+    # --- collect OEM-only candidates ---
+    for f in oem_files:
+        win = f["resolution"]
+        stride = f["stride"]
+        with pyBigWig.open(f["path"]) as bw:
+            for chrom, size in chrom_sizes.items():
+                pos = np.arange(0, size, stride)
+                oem_vals = np.nan_to_num(bw.values(chrom, 0, size, numpy=True))[::stride]
                 candidates[chrom].extend(find_oem_candidates(chrom, pos, oem_vals, win))
 
-    # --- save raw candidates ---
-    with open(out_bed, "w") as out:
-        for chrom, start, end, name, rfd_val, oem_val, win in raw_candidates:
-            out.write(f"{chrom}\t{start}\t{end}\t{name}\t{rfd_val:.5f}\t{oem_val:.5f}\t{win}\n")
+    # --- save raw candidates (BED4 only) ---
+    if out_bed:
+        with open(out_bed, "w") as out:
+            for chrom, start, end, name, *_ in raw_candidates:
+                strand = "+" if name.startswith("ORI") else "-"
+                out.write(f"{chrom}\t{start}\t{end}\t{name}\t.\t{strand}\n")
 
     return candidates
 
@@ -205,8 +218,8 @@ def merge_candidates(
     out_file: Optional[str] = None,
 ) -> Dict[str, List[Tuple[int, int, int, str, float, float, List[int], List[str]]]]:
     """
-    Merge ORI and TER candidates separately based on max_merge_size
-    and optionally write to a BED-like file.
+    Merge ORI and TER candidates separately based on max_merge_size.
+    Optionally write merged candidates to a BED6 file.
 
     Input
     -----
@@ -215,7 +228,8 @@ def merge_candidates(
     max_merge_size : int
         Maximum distance between consecutive candidates to merge them.
     out_file : str or None
-        If provided, writes merged candidates to this file.
+        If provided, writes merged candidates in BED6 format:
+        chrom, start, end, name, score (.), strand (+ for ORI, - for TER).
 
     Output
     ------
@@ -256,19 +270,19 @@ def merge_candidates(
                 else:
                     # finalize current cluster
                     center = (curr_start + curr_end) // 2
+                    cluster_type = types[0]  # ORI or TER
                     merged[chrom].append((
                         curr_start, curr_end, center,
-                        types[0],
+                        cluster_type,
                         float(np.mean(rfd_vals)),
                         float(np.mean(oem_vals)),
                         wins.copy(),
                         types.copy()
                     ))
                     if out_file:
+                        strand = "+" if cluster_type.startswith("ORI") else "-"
                         lines_to_write.append(
-                            f"{chrom}\t{curr_start}\t{curr_end}\t{types[0]}\t"
-                            f"{np.mean(rfd_vals):.5f}\t{np.mean(oem_vals):.5f}\t"
-                            f"{len(wins)}\t{','.join(types)}\n"
+                            f"{chrom}\t{curr_start}\t{curr_end}\t{cluster_type}\t.\t{strand}\n"
                         )
                     # reset cluster
                     curr_start, curr_end = s, e
@@ -279,19 +293,19 @@ def merge_candidates(
 
             # flush final cluster
             center = (curr_start + curr_end) // 2
+            cluster_type = types[0]
             merged[chrom].append((
                 curr_start, curr_end, center,
-                types[0],
+                cluster_type,
                 float(np.mean(rfd_vals)),
                 float(np.mean(oem_vals)),
                 wins.copy(),
                 types.copy()
             ))
             if out_file:
+                strand = "+" if cluster_type.startswith("ORI") else "-"
                 lines_to_write.append(
-                    f"{chrom}\t{curr_start}\t{curr_end}\t{types[0]}\t"
-                    f"{np.mean(rfd_vals):.5f}\t{np.mean(oem_vals):.5f}\t"
-                    f"{len(wins)}\t{','.join(types)}\n"
+                    f"{chrom}\t{curr_start}\t{curr_end}\t{cluster_type}\t.\t{strand}\n"
                 )
 
     if out_file:
@@ -317,7 +331,7 @@ def filter_merged_candidates_by_evidence(
     n_evidence : int
         Minimum total supporting signals (RFD + OEM) required to keep a candidate.
     out_file : str or None
-        If provided, writes filtered candidates to this file.
+        If provided, writes filtered candidates to this file (BED6).
 
     Returns
     -------
@@ -336,10 +350,10 @@ def filter_merged_candidates_by_evidence(
             if n_rfd + n_oem >= n_evidence:
                 filtered[chrom].append((start, end, center, name, mean_rfd, mean_oem, wins, types))
                 if out_file:
+                    strand = "+" if name.startswith("ORI") else "-"
+                    # BED6: chrom, start, end, name, score, strand
                     lines_to_write.append(
-                        f"{chrom}\t{start}\t{end}\t{name}\t"
-                        f"{mean_rfd:.5f}\t{mean_oem:.5f}\t"
-                        f"{len(wins)}\t{','.join(types)}\n"
+                        f"{chrom}\t{start}\t{end}\t{name}\t.\t{strand}\n"
                     )
 
     if out_file:
@@ -350,9 +364,8 @@ def filter_merged_candidates_by_evidence(
 
 def recenter_candidates_to_oem_extrema(
     candidates: Dict[str, List[Tuple[int, int, int, str, float, float, List[int], List[str]]]],
+    input_files: List[str],
     out_prefix: str,
-    resolution: int,
-    stride: int,
     window_radius: int = 5000,
     ori_threshold: float = 0.5,
     ter_threshold: float = 0.5,
@@ -360,19 +373,16 @@ def recenter_candidates_to_oem_extrema(
 ) -> List[Tuple[str, int, int, str, int]]:
     """
     Recenters ORI/TER candidates to the nearest local max/min of the OEM signal
-    and adjusts their genomic size based on the signal shape.
+    using the provided OEM BigWig files.
 
     Parameters
     ----------
     candidates : dict
-        Dictionary of candidates per chromosome:
-        {chrom: [(start, end, center, name, rfd_val, oem_val, windows, types), ...]}
+        Dictionary of candidates per chromosome.
+    input_files : list of str
+        OEM BigWig file paths, following pattern: id_oem_stride_resolution.bw
     out_prefix : str
-        Prefix used to locate OEM BigWig files.
-    resolution : int
-        Resolution of the OEM BigWig file to load (bp).
-    stride : int
-        Bin stride (bp) used when creating the OEM file.
+        Prefix for output BED file if out_file is None.
     window_radius : int
         Search radius around candidate center (bp).
     ori_threshold : float
@@ -380,7 +390,7 @@ def recenter_candidates_to_oem_extrema(
     ter_threshold : float
         Fraction (0–1). TER boundaries are set where OEM > (1 - ter_threshold) * dip_value.
     out_file : str, optional
-        If provided, writes recentered candidates to a BED-like file.
+        BED6 output file path.
 
     Returns
     -------
@@ -390,9 +400,21 @@ def recenter_candidates_to_oem_extrema(
     if out_file is None:
         out_file = f"{out_prefix}_recentered_candidates.bed"
 
+    # Parse input OEM file(s)
+    oem_files = [f for f in input_files if re.search(r"_oem_\d+_\d+\.bw$", os.path.basename(f), re.IGNORECASE)]
+    if not oem_files:
+        raise ValueError("No OEM BigWig file found in input_files.")
+
+    # Use the first OEM file (you could adapt to choose resolution if multiple exist)
+    oem_file = oem_files[0]
+    match = re.search(r"_oem_(\d+)_(\d+)\.bw$", os.path.basename(oem_file), re.IGNORECASE)
+    if not match:
+        raise ValueError(f"Cannot parse stride/resolution from OEM file: {oem_file}")
+    stride = int(match.group(1))
+    resolution = int(match.group(2))
+
     # Load OEM BigWig
-    oem_bw_file = f"{out_prefix}_OEM_{resolution}bp.bw"
-    oem_bw = pyBigWig.open(oem_bw_file)
+    oem_bw = pyBigWig.open(oem_file)
 
     recentered: List[Tuple[str, int, int, str, int]] = []
 
@@ -401,7 +423,7 @@ def recenter_candidates_to_oem_extrema(
         per_base_signal = np.nan_to_num(oem_bw.values(chrom, 0, chrom_size, numpy=True))
         signal = per_base_signal[::stride]
 
-        for start, end, center, name, rfd_val, oem_val, win, types in cand_list:
+        for start, end, center, name, rfd_val, oem_val, wins, types in cand_list:
             center_bin = center // stride
             left_bin = max(0, (center - window_radius) // stride)
             right_bin = min(signal.size, (center + window_radius) // stride)
@@ -417,7 +439,6 @@ def recenter_candidates_to_oem_extrema(
                 rel_idx = np.argmin(np.abs(maxima - (center_bin - left_bin)))
                 new_bin = maxima[rel_idx] + left_bin
                 peak_val = signal[new_bin]
-
                 boundary_val = (1 - ori_threshold) * peak_val
                 left = new_bin
                 while left > 0 and signal[left] >= boundary_val:
@@ -430,8 +451,7 @@ def recenter_candidates_to_oem_extrema(
                 rel_idx = np.argmin(np.abs(minima - (center_bin - left_bin)))
                 new_bin = minima[rel_idx] + left_bin
                 dip_val = signal[new_bin]
-
-                boundary_val = (1 - ter_threshold) * dip_val  # dip_val < 0
+                boundary_val = (1 - ter_threshold) * dip_val
                 left = new_bin
                 while left > 0 and signal[left] <= boundary_val:
                     left -= 1
@@ -443,7 +463,6 @@ def recenter_candidates_to_oem_extrema(
                 new_bin = center_bin
                 left, right = new_bin, new_bin + 1
 
-            # Convert back to genomic coordinates
             new_center = new_bin * stride
             new_start = max(0, left * stride)
             new_end = min(chrom_size, right * stride)
@@ -452,7 +471,7 @@ def recenter_candidates_to_oem_extrema(
 
     oem_bw.close()
 
-    # Write BED
+    # Write BED6
     with open(out_file, "w") as f:
         for chrom, start, end, name, center in recentered:
             strand = "+" if "ORI" in name else "-"
@@ -460,34 +479,32 @@ def recenter_candidates_to_oem_extrema(
 
     return recentered
 
+
 def quantify_ori_term_efficiency_from_bw(
     recentered_candidates: List[Tuple[str, int, int, str, int]],
+    input_files: List[str],
     out_prefix: str,
-    resolution: int,
-    stride: int,
     out_file: Optional[str] = None
 ) -> List[Tuple[str, int, int, str, float, int]]:
     """
-    Quantify ORI/TER efficiency from an OEM BigWig at a given resolution.
+    Quantify ORI/TER efficiency from an OEM BigWig using provided input files.
 
     Each candidate is scored as:
       - ORI: maximum OEM in candidate region
       - TER: minimum OEM in candidate region
 
-    The BED score is scaled as round(1000 * abs(score)).
+    BED score is scaled as round(1000 * abs(score)).
 
     Parameters
     ----------
     recentered_candidates : list of tuples
         [(chrom, start, end, name, center), ...] from recentering step.
+    input_files : list of str
+        OEM BigWig file paths, following pattern: id_oem_stride_resolution.bw
     out_prefix : str
-        Prefix used for OEM BigWig files.
-    resolution : int
-        Resolution of the OEM BigWig file to read (bp).
-    stride : int
-        Bin stride in bp used in OEM creation.
+        Prefix used for BED output if out_file is None.
     out_file : str, optional
-        If provided, writes BED-like output to this path.
+        Output BED-like file.
 
     Returns
     -------
@@ -497,27 +514,34 @@ def quantify_ori_term_efficiency_from_bw(
     if out_file is None:
         out_file = f"{out_prefix}_efficiency_candidates.bed"
 
-    oem_bw_file = f"{out_prefix}_OEM_{resolution}bp.bw"
-    oem_bw = pyBigWig.open(oem_bw_file)
+    # Select first OEM file (could extend to multiple resolutions)
+    oem_files = [f for f in input_files if re.search(r"_oem_\d+_\d+\.bw$", os.path.basename(f), re.IGNORECASE)]
+    if not oem_files:
+        raise ValueError("No OEM BigWig file found in input_files.")
+    
+    oem_file = oem_files[0]
+    match = re.search(r"_oem_(\d+)_(\d+)\.bw$", os.path.basename(oem_file), re.IGNORECASE)
+    if not match:
+        raise ValueError(f"Cannot parse stride/resolution from OEM file: {oem_file}")
+    stride = int(match.group(1))
+    resolution = int(match.group(2))
+
+    oem_bw = pyBigWig.open(oem_file)
 
     efficiency_lines: List[Tuple[str, int, int, str, float, int]] = []
 
-    # Iterate through chromosomes in the BigWig
     for chrom in oem_bw.chroms():
         chrom_size = oem_bw.chroms()[chrom]
         per_base_signal = np.nan_to_num(oem_bw.values(chrom, 0, chrom_size, numpy=True))
         signal = per_base_signal[::stride]
 
-        # Filter candidates for this chromosome
         chrom_candidates = [c for c in recentered_candidates if c[0] == chrom]
 
         for _, start, end, name, center in chrom_candidates:
             left_bin = max(0, start // stride)
             right_bin = min(signal.size, (end + stride - 1) // stride)
-
             if right_bin <= left_bin:
                 continue
-
             local_signal = signal[left_bin:right_bin]
 
             if "ORI" in name:
@@ -533,15 +557,14 @@ def quantify_ori_term_efficiency_from_bw(
 
             efficiency_lines.append((chrom, start, end, name, score, center))
 
-    # Helper to assign BED RGB colors
+    # BED6/extended BED output
     def colorize(name: str) -> str:
         return "0,255,0" if "ORI" in name else "255,0,0"
 
-    # Write BED-like file
     with open(out_file, "w") as f:
         for chrom, start, end, name, score, center in efficiency_lines:
             strand = "+" if "ORI" in name else "-"
-            bed_score = int(round(1000 * abs(score)))  # OEM in [0,1] → [0,1000]
+            bed_score = int(round(1000 * abs(score)))
             color = colorize(name)
             f.write(f"{chrom}\t{start}\t{end}\t{name}\t{bed_score}\t{strand}\t"
                     f"{start}\t{end}\t{color}\n")
@@ -565,7 +588,7 @@ def filter_efficiency_candidates(
     cutoff : float, optional
         Minimum BED score (0–1000) to retain. Default is 10.
     out_file : str, optional
-        If provided, writes filtered candidates in BED-like format.
+        If provided, writes filtered candidates in BED6+ format.
 
     Returns
     -------
