@@ -36,8 +36,8 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 
 	# create parser
 	parser: argparse.ArgumentParser = argparse.ArgumentParser(prog="replicnn",
-															  description="RepliCNN - Replication timing prediction and analyses",
-															  )
+															description="RepliCNN - Replication timing prediction and analyses",
+															)
 	parser.add_argument("-v", "--version", action="version", version=f"RepliCNN v{version('replicnn')}")
 	subparsers = parser.add_subparsers(help="Commands", dest="command")
 
@@ -62,7 +62,7 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 								type=str, nargs=1, required=True)
 	prepare_parser.add_argument("-o", "--outpath", 
 								help="File where the output should be written to.", 
-							 	type=str, nargs=1, required=True)
+								type=str, nargs=1, required=True)
 	prepare_parser.add_argument("-t", "--timing", 
 								help="Path to a timing file.", 
 								type=str, nargs=1)
@@ -76,43 +76,43 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 	# create subparser for module 1: train
 	## parser
 	train_parser: argparse.ArgumentParser = subparsers.add_parser("train", 
-																  help="Train a model.", 
-																  description="RepliCNN train - Train a model using SDF-file(s). Model quality can be assessed using the -cv option performing a Leave-One-Chromosome-Out Cross-Validation.",
-																  )
+																help="Train a model.", 
+																description="RepliCNN train - Train a model using SDF-file(s). Model quality can be assessed using the -cv option performing a Leave-One-Chromosome-Out Cross-Validation.",
+																)
 	## arguments
 	train_parser.add_argument("-i", "--input", 
-							  help="Path(-s) to one/multiple sdf file(-s).", 
-							  type=str, nargs="+", required=True)
+							help="Path(-s) to one/multiple sdf file(-s).", 
+							type=str, nargs="+", required=True)
 	train_parser.add_argument("-o", "--outpath", 
-							  help="Folder where the model should be written to.", 
-							  type=str, nargs=1, required=True)
+							help="Folder where the model should be written to.", 
+							type=str, nargs=1, required=True)
 	train_parser.add_argument("-g", "--gpu", 
-							  help="Enables training on gpu. Defaults to False", 
-							  action="store_true")
+							help="Enables training on gpu. Defaults to False", 
+							action="store_true")
 	train_parser.add_argument("-ws", "--windowsize", 
-							  help="Window size for chunks. Defaults to 201.", 
-							  type=int, nargs=1)
+							help="Window size for chunks. Defaults to 201.", 
+							type=int, nargs=1)
 	train_parser.add_argument("-e", "--epochs", 
-							  help="Number of epochs to train for. Defaults to 300.", 
-							  type=int, nargs=1)
+							help="Number of epochs to train for. Defaults to 300.", 
+							type=int, nargs=1)
 	train_parser.add_argument("-bs", "--batchsize", 
-							  help="Batch size. Defaults to 32.", 
-							  type=int, nargs=1)
+							help="Batch size. Defaults to 32.", 
+							type=int, nargs=1)
 	train_parser.add_argument("-nes", "--noearlystopping", 
-							  help="Whether to inactivate early stopping during training. Defaults to False.", 
-							  action="store_false")					  
+							help="Whether to inactivate early stopping during training. Defaults to False.", 
+							action="store_false")					  
 	train_parser.add_argument("-v", "--validationsplit", 
-							  help="Percent of data used as validation. Defaults to 0.1.", 
-							  type=float, nargs=1)
+							help="Percent of data used as validation. Defaults to 0.1.", 
+							type=float, nargs=1)
 	train_parser.add_argument("-lr", "--learningrate", 
-							  help="Learning rate for Adam optimizer. Defaults to 0.001.", 
-							  type=float, nargs=1)
+							help="Learning rate for Adam optimizer. Defaults to 0.001.", 
+							type=float, nargs=1)
 	train_parser.add_argument("-cv", "--crossvalidate", 
-							  help="Leave-One-Chromosome-Out Cross-Validation on the given dataset. Only compatible with one SDF-file.", 
-							  action="store_true")
+							help="Leave-One-Chromosome-Out Cross-Validation on the given dataset. Only compatible with one SDF-file.", 
+							action="store_true")
 	train_parser.add_argument("-nl", "--nolog", 
-							  help="Disable logging.", 
-							  action="store_false")		  	  
+							help="Disable logging.", 
+							action="store_false")		  	  
 
 	# create subparser for module 2: predict
 	## parser
@@ -132,7 +132,7 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 								type=str, nargs=1)
 	predict_parser.add_argument("-g", "--gpu", 
 								help="Enables prediction on gpu. Defaults to False", 
-							  	action="store_true")	
+								action="store_true")	
 	predict_parser.add_argument("-nl", "--nolog", 
 								help="Disable logging.", 
 								action="store_false")	
@@ -216,11 +216,11 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 
 	## arguments
 	ori_ter_parser.add_argument(
-    "-i", "--input",
-    help="Path(s) to RFD/OEM BigWig files.",
-    type=str,
-    nargs="+",
-    required=True
+	"-i", "--input",
+	help="Path(s) to RFD/OEM BigWig files.",
+	type=str,
+	nargs="+",
+	required=True
 	)
 	ori_ter_parser.add_argument(
 		"-cs", "--chromsizes",
@@ -290,28 +290,28 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 	# create subparser for module 4: quantify
 	## parser
 	quantify_parser: argparse.ArgumentParser = subparsers.add_parser("quantify", 
-																	 help="Quantify timing changes.", 
-																	 description="RepliCNN quanitfy - Quantify timing changes between two conditions or one condition and a reference.",
-																	 )
+																	help="Quantify timing changes.", 
+																	description="RepliCNN quanitfy - Quantify timing changes between two conditions or one condition and a reference.",
+																	)
 	## arguments
 	quantify_parser.add_argument("-c1", "--cond1", 
-								 help="List of SDF-files for conditions 1.", 
-								 type=str, nargs="+", required=True)
+								help="List of SDF-files for conditions 1.", 
+								type=str, nargs="+", required=True)
 	quantify_parser.add_argument("-c2", "--cond2", 
-								 help="List of SDF-files for conditions 2. Mutually exclusive with reference.", 
-								 type=str, nargs="+")
+								help="List of SDF-files for conditions 2. Mutually exclusive with reference.", 
+								type=str, nargs="+")
 	quantify_parser.add_argument("-ref", "--reference", 
-								 help="Reference timing file. Mutually exclusive with cond2.", 
-								 type=str, nargs=1)
+								help="Reference timing file. Mutually exclusive with cond2.", 
+								type=str, nargs=1)
 	quantify_parser.add_argument("-a", "--alpha", 
-								 help="Alpha threshold for significance testing. Defaults to 0.05.", 
-								 type=float, nargs=1)
+								help="Alpha threshold for significance testing. Defaults to 0.05.", 
+								type=float, nargs=1)
 	quantify_parser.add_argument("-bed", "--asbedfile", 
-								 help="Write output in bed6-format.", 
-								 action="store_true")
+								help="Write output in bed6-format.", 
+								action="store_true")
 	quantify_parser.add_argument("-nl", "--nolog", 
-								 help="Disable logging.", 
-								 action="store_false")	
+								help="Disable logging.", 
+								action="store_false")	
 
 	# create subparser for module 5: visualise
 	## parser
@@ -407,25 +407,25 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 
 	## module 4: ori_ter
 	elif args.command == "ori_ter":
-    try:
-        logger.info("Started RepliCNN ori_ter!")
-        from .ori_ter import _ori_ter  # import your _ori_ter function
-        _ori_ter(
-            input_files=args.input,
-            output_prefix=args.output_prefix,
-            chrom_sizes_file=args.chromsizes,
-            save_intermediates=args.save_intermediates,
-            log=args.nolog,
-            ori_threshold=args.ori_threshold,
-            ter_threshold=args.ter_threshold,
-            window_radius=args.window_radius,
-            max_merge_size=args.max_merge_size,
-            n_evidence=args.n_evidence,
-            smooth_factor_base=args.smooth_factor_base,
-            cutoff=args.cutoff,
-        )
-    finally:
-        logger.info("Ended RepliCNN ori_ter!")
+	try:
+		logger.info("Started RepliCNN ori_ter!")
+		from .ori_ter import _ori_ter  # import your _ori_ter function
+		_ori_ter(
+			input_files=args.input,
+			output_prefix=args.output_prefix,
+			chrom_sizes_file=args.chromsizes,
+			save_intermediates=args.save_intermediates,
+			log=args.nolog,
+			ori_threshold=args.ori_threshold,
+			ter_threshold=args.ter_threshold,
+			window_radius=args.window_radius,
+			max_merge_size=args.max_merge_size,
+			n_evidence=args.n_evidence,
+			smooth_factor_base=args.smooth_factor_base,
+			cutoff=args.cutoff,
+		)
+	finally:
+		logger.info("Ended RepliCNN ori_ter!")
 
 	## module 5: quantify
 	elif args.command == "quantify":
@@ -463,8 +463,8 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 	return None
 
 def main_wrapper():
-    logger.info("Started RepliCNN!")
-    try:
-        main()
-    finally:
-        logger.info("Ended RepliCNN!")
+	logger.info("Started RepliCNN!")
+	try:
+		main()
+	finally:
+		logger.info("Ended RepliCNN!")
