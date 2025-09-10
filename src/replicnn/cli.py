@@ -407,25 +407,25 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 
 	## module 4: ori_ter
 	elif args.command == "ori_ter":
-	try:
-		logger.info("Started RepliCNN ori_ter!")
-		from .ori_ter import _ori_ter  # import your _ori_ter function
-		_ori_ter(
-			input_files=args.input,
-			output_prefix=args.output_prefix,
-			chrom_sizes_file=args.chromsizes,
-			save_intermediates=args.save_intermediates,
-			log=args.nolog,
-			ori_threshold=args.ori_threshold,
-			ter_threshold=args.ter_threshold,
-			window_radius=args.window_radius,
-			max_merge_size=args.max_merge_size,
-			n_evidence=args.n_evidence,
-			smooth_factor_base=args.smooth_factor_base,
-			cutoff=args.cutoff,
-		)
-	finally:
-		logger.info("Ended RepliCNN ori_ter!")
+		try:
+			logger.info("Started RepliCNN ori_ter!")
+			from .ori_ter import _ori_ter  # import your _ori_ter function
+			_ori_ter(
+				input_files=args.input,
+				output_prefix=args.output_prefix,
+				chrom_sizes_file=args.chromsizes,
+				save_intermediates=args.save_intermediates,
+				log=args.nolog,
+				ori_threshold=args.ori_threshold,
+				ter_threshold=args.ter_threshold,
+				window_radius=args.window_radius,
+				max_merge_size=args.max_merge_size,
+				n_evidence=args.n_evidence,
+				smooth_factor_base=args.smooth_factor_base,
+				cutoff=args.cutoff,
+			)
+		finally:
+			logger.info("Ended RepliCNN ori_ter!")
 
 	## module 5: quantify
 	elif args.command == "quantify":
