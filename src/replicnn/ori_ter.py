@@ -57,6 +57,7 @@ def _ori_ter(
 	input_files: List[str],
 	output_prefix: str,
 	chrom_sizes_file: str,
+	eval_resolution: int,
 	save_intermediates: bool = False,
 	log: bool = False,
 	# Parameters for recenter_candidates_to_oem_extrema
@@ -71,6 +72,7 @@ def _ori_ter(
 	smooth_factor_base: float = 1e-3,
 	# Parameters for filter_efficiency_candidates
 	cutoff: int = 15,
+	
 ) -> None:
 	"""
 	Wrapper for ori_ter: reads chrom sizes, calls main function, and writes results.
@@ -87,6 +89,7 @@ def _ori_ter(
 		input_files=input_files,
 		output_prefix=output_prefix,
 		chrom_sizes=chrom_sizes,
+		eval_resolution=eval_resolution,
 		save_intermediates=save_intermediates,
 		logger=logger,
 		ori_threshold=ori_threshold,
@@ -107,6 +110,7 @@ def ori_ter(
 	output_prefix: str,
 	chrom_sizes: Dict[str, int],
 	save_intermediates: bool = False,
+	eval_resolution: int,
 	logger: logging.Logger = None,
 	# Parameters for recenter_candidates_to_oem_extrema
 	ori_threshold: float = 0.05,
@@ -159,19 +163,23 @@ def ori_ter(
 
 	# Step 4: Recenter candidates to OEM extrema
 	recentered_candidates = recenter_candidates_to_oem_extrema(
+		input_files=input_files,
 		candidates=filtered_candidates,
 		out_prefix=output_prefix,
 		window_radius=window_radius,
 		ori_threshold=ori_threshold,
 		ter_threshold=ter_threshold,
+		eval_resolution=eval_resolution,
 		out_file=f"{output_prefix}_oris_ters_step4.bed" if save_intermediates else None,
 	)
 	results["recentered_candidates"] = recentered_candidates
 
 	# Step 5: Quantify ORI/TER efficiency
 	efficiency_scores = quantify_ori_term_efficiency_from_bw(
+		input_files=input_files,
 		recentered_candidates=recentered_candidates,
 		out_prefix=output_prefix,
+		eval_resolution=eval_resolution,
 		out_file=f"{output_prefix}_oris_ters_step5.bed" if save_intermediates else None,
 	)
 	results["efficiency_candidates"] = efficiency_scores

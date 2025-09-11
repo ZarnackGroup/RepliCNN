@@ -286,6 +286,12 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 		type=int,
 		default=15
 	)
+	ori_ter_parser.add_argument(
+		"-er", "--eval_resolution",
+		help="OEM resolution used for recentering and scoring.",
+		type=int,
+		required=True
+	)
 
 	# create subparser for module 4: quantify
 	## parser
@@ -423,6 +429,7 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 				n_evidence=args.n_evidence,
 				smooth_factor_base=args.smooth_factor_base,
 				cutoff=args.cutoff,
+				eval_resolution=args.eval_resolution,
 			)
 		finally:
 			logger.info("Ended RepliCNN ori_ter!")

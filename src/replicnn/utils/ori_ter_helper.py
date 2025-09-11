@@ -363,214 +363,226 @@ def filter_merged_candidates_by_evidence(
 	return filtered
 
 def recenter_candidates_to_oem_extrema(
-	candidates: Dict[str, List[Tuple[int, int, int, str, float, float, List[int], List[str]]]],
-	input_files: List[str],
-	out_prefix: str,
-	window_radius: int = 5000,
-	ori_threshold: float = 0.5,
-	ter_threshold: float = 0.5,
-	out_file: Optional[str] = None,
+    candidates: Dict[str, List[Tuple[int, int, int, str, float, float, List[int], List[str]]]],
+    input_files: List[str],
+    out_prefix: str,
+    eval_resolution: int,
+    window_radius: int = 5000,
+    ori_threshold: float = 0.5,
+    ter_threshold: float = 0.5,
+    out_file: Optional[str] = None,
 ) -> List[Tuple[str, int, int, str, int]]:
-	"""
-	Recenters ORI/TER candidates to the nearest local max/min of the OEM signal
-	using the provided OEM BigWig files.
+    """
+    Recenters ORI/TER candidates to the nearest local max/min of the OEM signal
+    using the OEM BigWig file that matches eval_resolution.
 
-	Parameters
-	----------
-	candidates : dict
-		Dictionary of candidates per chromosome.
-	input_files : list of str
-		OEM BigWig file paths, following pattern: id_oem_stride_resolution.bw
-	out_prefix : str
-		Prefix for output BED file if out_file is None.
-	window_radius : int
-		Search radius around candidate center (bp).
-	ori_threshold : float
-		Fraction (0–1). ORI boundaries are set where OEM < (1 - ori_threshold) * peak_value.
-	ter_threshold : float
-		Fraction (0–1). TER boundaries are set where OEM > (1 - ter_threshold) * dip_value.
-	out_file : str, optional
-		BED6 output file path.
+    Parameters
+    ----------
+    candidates : dict
+        Dictionary of candidates per chromosome.
+    input_files : list of str
+        OEM BigWig file paths, following pattern: id_oem_stride_resolution.bw
+    out_prefix : str
+        Prefix for output BED file if out_file is None.
+    eval_resolution : int
+        Resolution (bp) used to select the correct OEM BigWig file.
+    window_radius : int
+        Search radius around candidate center (bp).
+    ori_threshold : float
+        Fraction (0–1). ORI boundaries are set where OEM < (1 - ori_threshold) * peak_value.
+    ter_threshold : float
+        Fraction (0–1). TER boundaries are set where OEM > (1 - ter_threshold) * dip_value.
+    out_file : str, optional
+        BED6 output file path.
 
-	Returns
-	-------
-	recentered : list of tuples
-		[(chrom, new_start, new_end, name, new_center), ...]
-	"""
-	if out_file is None:
-		out_file = f"{out_prefix}_recentered_candidates.bed"
+    Returns
+    -------
+    recentered : list of tuples
+        [(chrom, new_start, new_end, name, new_center), ...]
+    """
+    if out_file is None:
+        out_file = f"{out_prefix}_recentered_candidates.bed"
 
-	# Parse input OEM file(s)
-	oem_files = [f for f in input_files if re.search(r"_oem_\d+_\d+\.bw$", os.path.basename(f), re.IGNORECASE)]
-	if not oem_files:
-		raise ValueError("No OEM BigWig file found in input_files.")
+    # Select OEM file with matching resolution
+    oem_files = [
+        f for f in input_files
+        if re.search(rf"_oem_\d+_{eval_resolution}\.bw$", os.path.basename(f), re.IGNORECASE)
+    ]
+    if not oem_files:
+        raise ValueError(f"No OEM BigWig file found for resolution={eval_resolution} in input_files.")
+    oem_file = oem_files[0]
 
-	# Use the first OEM file (you could adapt to choose resolution if multiple exist)
-	oem_file = oem_files[0]
-	match = re.search(r"_oem_(\d+)_(\d+)\.bw$", os.path.basename(oem_file), re.IGNORECASE)
-	if not match:
-		raise ValueError(f"Cannot parse stride/resolution from OEM file: {oem_file}")
-	stride = int(match.group(1))
-	resolution = int(match.group(2))
+    # Parse stride from filename
+    match = re.search(r"_oem_(\d+)_(\d+)\.bw$", os.path.basename(oem_file), re.IGNORECASE)
+    if not match:
+        raise ValueError(f"Cannot parse stride/resolution from OEM file: {oem_file}")
+    stride = int(match.group(1))
+    resolution = int(match.group(2))
+    assert resolution == eval_resolution, f"File resolution {resolution} ≠ eval_resolution {eval_resolution}"
 
-	# Load OEM BigWig
-	oem_bw = pyBigWig.open(oem_file)
+    recentered: List[Tuple[str, int, int, str, int]] = []
 
-	recentered: List[Tuple[str, int, int, str, int]] = []
+    # Open BigWig safely
+    with pyBigWig.open(oem_file) as oem_bw:
+        for chrom, cand_list in candidates.items():
+            chrom_size = oem_bw.chroms()[chrom]
+            per_base_signal = np.nan_to_num(oem_bw.values(chrom, 0, chrom_size, numpy=True))
+            signal = per_base_signal[::stride]
 
-	for chrom, cand_list in candidates.items():
-		chrom_size = oem_bw.chroms()[chrom]
-		per_base_signal = np.nan_to_num(oem_bw.values(chrom, 0, chrom_size, numpy=True))
-		signal = per_base_signal[::stride]
+            for start, end, center, name, rfd_val, oem_val, wins, types in cand_list:
+                center_bin = center // stride
+                left_bin = max(0, (center - window_radius) // stride)
+                right_bin = min(signal.size, (center + window_radius) // stride)
+                local_signal = signal[left_bin:right_bin]
 
-		for start, end, center, name, rfd_val, oem_val, wins, types in cand_list:
-			center_bin = center // stride
-			left_bin = max(0, (center - window_radius) // stride)
-			right_bin = min(signal.size, (center + window_radius) // stride)
-			local_signal = signal[left_bin:right_bin]
+                if local_signal.size == 0:
+                    continue
 
-			if local_signal.size == 0:
-				continue
+                maxima = argrelextrema(local_signal, np.greater)[0]
+                minima = argrelextrema(local_signal, np.less)[0]
 
-			maxima = argrelextrema(local_signal, np.greater)[0]
-			minima = argrelextrema(local_signal, np.less)[0]
+                if "ORI" in name and maxima.size > 0:
+                    rel_idx = np.argmin(np.abs(maxima - (center_bin - left_bin)))
+                    new_bin = maxima[rel_idx] + left_bin
+                    peak_val = signal[new_bin]
+                    boundary_val = (1 - ori_threshold) * peak_val
+                    left = new_bin
+                    while left > 0 and signal[left] >= boundary_val:
+                        left -= 1
+                    right = new_bin
+                    while right < len(signal) and signal[right] >= boundary_val:
+                        right += 1
 
-			if "ORI" in name and maxima.size > 0:
-				rel_idx = np.argmin(np.abs(maxima - (center_bin - left_bin)))
-				new_bin = maxima[rel_idx] + left_bin
-				peak_val = signal[new_bin]
-				boundary_val = (1 - ori_threshold) * peak_val
-				left = new_bin
-				while left > 0 and signal[left] >= boundary_val:
-					left -= 1
-				right = new_bin
-				while right < len(signal) and signal[right] >= boundary_val:
-					right += 1
+                elif "TER" in name and minima.size > 0:
+                    rel_idx = np.argmin(np.abs(minima - (center_bin - left_bin)))
+                    new_bin = minima[rel_idx] + left_bin
+                    dip_val = signal[new_bin]
+                    boundary_val = (1 - ter_threshold) * dip_val
+                    left = new_bin
+                    while left > 0 and signal[left] <= boundary_val:
+                        left -= 1
+                    right = new_bin
+                    while right < len(signal) and signal[right] <= boundary_val:
+                        right += 1
 
-			elif "TER" in name and minima.size > 0:
-				rel_idx = np.argmin(np.abs(minima - (center_bin - left_bin)))
-				new_bin = minima[rel_idx] + left_bin
-				dip_val = signal[new_bin]
-				boundary_val = (1 - ter_threshold) * dip_val
-				left = new_bin
-				while left > 0 and signal[left] <= boundary_val:
-					left -= 1
-				right = new_bin
-				while right < len(signal) and signal[right] <= boundary_val:
-					right += 1
+                else:
+                    new_bin = center_bin
+                    left, right = new_bin, new_bin + 1
 
-			else:
-				new_bin = center_bin
-				left, right = new_bin, new_bin + 1
+                new_center = new_bin * stride
+                new_start = max(0, left * stride)
+                new_end = min(chrom_size, right * stride)
 
-			new_center = new_bin * stride
-			new_start = max(0, left * stride)
-			new_end = min(chrom_size, right * stride)
+                recentered.append((chrom, new_start, new_end, name, new_center))
 
-			recentered.append((chrom, new_start, new_end, name, new_center))
+    # Write BED6
+    with open(out_file, "w") as f:
+        for chrom, start, end, name, center in recentered:
+            strand = "+" if "ORI" in name else "-"
+            f.write(f"{chrom}\t{start}\t{end}\t{name}\t0\t{strand}\n")
 
-	oem_bw.close()
-
-	# Write BED6
-	with open(out_file, "w") as f:
-		for chrom, start, end, name, center in recentered:
-			strand = "+" if "ORI" in name else "-"
-			f.write(f"{chrom}\t{start}\t{end}\t{name}\t0\t{strand}\n")
-
-	return recentered
-
+    return recentered
 
 def quantify_ori_term_efficiency_from_bw(
-	recentered_candidates: List[Tuple[str, int, int, str, int]],
-	input_files: List[str],
-	out_prefix: str,
-	out_file: Optional[str] = None
+    recentered_candidates: List[Tuple[str, int, int, str, int]],
+    input_files: List[str],
+    out_prefix: str,
+    eval_resolution: int,
+    out_file: Optional[str] = None
 ) -> List[Tuple[str, int, int, str, float, int]]:
-	"""
-	Quantify ORI/TER efficiency from an OEM BigWig using provided input files.
+    """
+    Quantify ORI/TER efficiency from an OEM BigWig at a given resolution.
 
-	Each candidate is scored as:
-	- ORI: maximum OEM in candidate region
-	- TER: minimum OEM in candidate region
+    Each candidate is scored as:
+      - ORI: maximum OEM in candidate region
+      - TER: minimum OEM in candidate region
 
-	BED score is scaled as round(1000 * abs(score)).
+    The BED score is scaled as round(1000 * abs(score)).
 
-	Parameters
-	----------
-	recentered_candidates : list of tuples
-		[(chrom, start, end, name, center), ...] from recentering step.
-	input_files : list of str
-		OEM BigWig file paths, following pattern: id_oem_stride_resolution.bw
-	out_prefix : str
-		Prefix used for BED output if out_file is None.
-	out_file : str, optional
-		Output BED-like file.
+    Parameters
+    ----------
+    recentered_candidates : list of tuples
+        [(chrom, start, end, name, center), ...] from recentering step.
+    input_files : list of str
+        OEM BigWig file paths, following pattern: id_oem_stride_resolution.bw
+    out_prefix : str
+        Prefix for BED output if out_file is None.
+    eval_resolution : int
+        Resolution (bp) used to select the correct OEM BigWig file.
+    out_file : str, optional
+        Output BED-like file.
 
-	Returns
-	-------
-	efficiency_lines : list of tuples
-		[(chrom, start, end, name, score, center), ...]
-	"""
-	if out_file is None:
-		out_file = f"{out_prefix}_efficiency_candidates.bed"
+    Returns
+    -------
+    efficiency_lines : list of tuples
+        [(chrom, start, end, name, score, center), ...]
+    """
+    if out_file is None:
+        out_file = f"{out_prefix}_efficiency_candidates.bed"
 
-	# Select first OEM file (could extend to multiple resolutions)
-	oem_files = [f for f in input_files if re.search(r"_oem_\d+_\d+\.bw$", os.path.basename(f), re.IGNORECASE)]
-	if not oem_files:
-		raise ValueError("No OEM BigWig file found in input_files.")
-	
-	oem_file = oem_files[0]
-	match = re.search(r"_oem_(\d+)_(\d+)\.bw$", os.path.basename(oem_file), re.IGNORECASE)
-	if not match:
-		raise ValueError(f"Cannot parse stride/resolution from OEM file: {oem_file}")
-	stride = int(match.group(1))
-	resolution = int(match.group(2))
+    # Select OEM file with matching resolution
+    oem_files = [
+        f for f in input_files
+        if re.search(rf"_oem_\d+_{eval_resolution}\.bw$", os.path.basename(f), re.IGNORECASE)
+    ]
+    if not oem_files:
+        raise ValueError(f"No OEM BigWig file found for resolution={eval_resolution} in input_files.")
+    oem_file = oem_files[0]
 
-	oem_bw = pyBigWig.open(oem_file)
+    # Parse stride from filename
+    match = re.search(r"_oem_(\d+)_(\d+)\.bw$", os.path.basename(oem_file), re.IGNORECASE)
+    if not match:
+        raise ValueError(f"Cannot parse stride/resolution from OEM file: {oem_file}")
+    stride = int(match.group(1))
+    resolution = int(match.group(2))
+    assert resolution == eval_resolution, f"File resolution {resolution} ≠ eval_resolution {eval_resolution}"
 
-	efficiency_lines: List[Tuple[str, int, int, str, float, int]] = []
+    efficiency_lines: List[Tuple[str, int, int, str, float, int]] = []
 
-	for chrom in oem_bw.chroms():
-		chrom_size = oem_bw.chroms()[chrom]
-		per_base_signal = np.nan_to_num(oem_bw.values(chrom, 0, chrom_size, numpy=True))
-		signal = per_base_signal[::stride]
+    with pyBigWig.open(oem_file) as oem_bw:
+        for chrom in oem_bw.chroms():
+            chrom_size = oem_bw.chroms()[chrom]
+            per_base_signal = np.nan_to_num(oem_bw.values(chrom, 0, chrom_size, numpy=True))
+            signal = per_base_signal[::stride]
 
-		chrom_candidates = [c for c in recentered_candidates if c[0] == chrom]
+            # Candidates from this chromosome
+            chrom_candidates = [c for c in recentered_candidates if c[0] == chrom]
 
-		for _, start, end, name, center in chrom_candidates:
-			left_bin = max(0, start // stride)
-			right_bin = min(signal.size, (end + stride - 1) // stride)
-			if right_bin <= left_bin:
-				continue
-			local_signal = signal[left_bin:right_bin]
+            for _, start, end, name, center in chrom_candidates:
+                left_bin = max(0, start // stride)
+                right_bin = min(signal.size, (end + stride - 1) // stride)
+                if right_bin <= left_bin:
+                    continue
 
-			if "ORI" in name:
-				score = float(np.max(local_signal))
-				if score < 0:
-					continue
-			elif "TER" in name:
-				score = float(np.min(local_signal))
-				if score > 0:
-					continue
-			else:
-				continue
+                local_signal = signal[left_bin:right_bin]
 
-			efficiency_lines.append((chrom, start, end, name, score, center))
+                if "ORI" in name:
+                    score = float(np.max(local_signal))
+                    if score < 0:
+                        continue
+                elif "TER" in name:
+                    score = float(np.min(local_signal))
+                    if score > 0:
+                        continue
+                else:
+                    continue
 
-	# BED6/extended BED output
-	def colorize(name: str) -> str:
-		return "0,255,0" if "ORI" in name else "255,0,0"
+                efficiency_lines.append((chrom, start, end, name, score, center))
 
-	with open(out_file, "w") as f:
-		for chrom, start, end, name, score, center in efficiency_lines:
-			strand = "+" if "ORI" in name else "-"
-			bed_score = int(round(1000 * abs(score)))
-			color = colorize(name)
-			f.write(f"{chrom}\t{start}\t{end}\t{name}\t{bed_score}\t{strand}\t"
-					f"{start}\t{end}\t{color}\n")
+    # Helper to assign BED RGB colors
+    def colorize(name: str) -> str:
+        return "0,255,0" if "ORI" in name else "255,0,0"
 
-	oem_bw.close()
-	return efficiency_lines
+    # Write BED-like output
+    with open(out_file, "w") as f:
+        for chrom, start, end, name, score, center in efficiency_lines:
+            strand = "+" if "ORI" in name else "-"
+            bed_score = int(round(1000 * abs(score)))  # OEM in [0,1] → [0,1000]
+            color = colorize(name)
+            f.write(f"{chrom}\t{start}\t{end}\t{name}\t{bed_score}\t{strand}\t"
+                    f"{start}\t{end}\t{color}\n")
+
+    return efficiency_lines
 
 def filter_efficiency_candidates(
 	candidates: List[Tuple[str, int, int, str, float, int]],
