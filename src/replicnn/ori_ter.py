@@ -109,8 +109,8 @@ def ori_ter(
 	input_files: List[str],
 	output_prefix: str,
 	chrom_sizes: Dict[str, int],
-	save_intermediates: bool = False,
 	eval_resolution: int,
+	save_intermediates: bool = False,
 	logger: logging.Logger = None,
 	# Parameters for recenter_candidates_to_oem_extrema
 	ori_threshold: float = 0.05,
