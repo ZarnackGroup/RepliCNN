@@ -32,11 +32,13 @@ from typing import Dict, List, Tuple, Optional
 import pyBigWig
 import logging
 import random
+import re
 
 import pandas as pd
 import numpy as np
 import scipy
-import re
+from scipy.signal import argrelextrema
+from scipy.interpolate import UnivariateSpline
 
 os.environ["KERAS_BACKEND"] = "torch"
 import torch
