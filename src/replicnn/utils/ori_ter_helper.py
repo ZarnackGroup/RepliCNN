@@ -29,6 +29,7 @@ import shutil
 import sys
 import typing
 from typing import Dict, List, Tuple, Optional
+import pyBigWig
 import logging
 import random
 
