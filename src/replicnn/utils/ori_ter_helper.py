@@ -28,7 +28,7 @@ import os
 import shutil
 import sys
 import typing
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 import logging
 import random
 
