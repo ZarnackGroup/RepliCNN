@@ -103,7 +103,17 @@ def _ori_ter(
 	)
 
 	# Save final filtered_efficiency
-	save_dataframe(results["filtered_efficiency"], f"{output_prefix}_oris_ters.bed", log=log)
+	#save_dataframe(results["filtered_efficiency"], f"{output_prefix}_oris_ters.bed", log=log)
+	out_file = f"{output_prefix}_oris_ters.bed"
+	with open(out_file, "w") as f:
+		for chrom, start, end, name, score, center in results["filtered_efficiency"]:
+			strand = "+" if "ORI" in name else "-"
+			color = "0,255,0" if "ORI" in name else "255,0,0"
+			bed_score = int(round(1000 * abs(score)))
+			f.write(
+				f"{chrom}\t{start}\t{end}\t{name}\t{bed_score}\t{strand}\t"
+				f"{start}\t{end}\t{color}\n"
+			)
 
 
 def ori_ter(
