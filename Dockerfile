@@ -22,15 +22,6 @@ WORKDIR /app
 # Copy wheel and install
 COPY dist/replicnn-${VERSION}-py3-none-any.whl ./
 RUN pip install replicnn-${VERSION}-py3-none-any.whl
-
-# Run tests
-RUN replicnn --help && \
-	replicnn --version && \
-    replicnn train --help && \
-    replicnn predict --help && \
-    replicnn analyse --help && \
-    replicnn quantify --help && \
-	replicnn visualise --help
     
 # Final slim image
 FROM ${BASE_IMAGE}

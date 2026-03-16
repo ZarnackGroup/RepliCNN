@@ -3,7 +3,7 @@
 
 """
 RepliCNN - Replication timing prediction and analyses
-Copyright (C) 2025 Dominik Stroh
+Copyright (C) 2026 Dominik Stroh
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -36,9 +36,6 @@ import pandas as pd
 import numpy as np
 import scipy
 import pyBigWig
-
-#import matplotlib.pyplot as plt
-#import seaborn as sns
 
 os.environ["KERAS_BACKEND"] = "torch"
 import torch
@@ -282,12 +279,3 @@ def save_model(model:keras.src.models.sequential.Sequential, path:str, log:bool=
 	model.save(f"{path}model.keras")
 	
 	return None
-
-# def save_plot(path:str, log:bool=False) -> None:
-# 	"""Saves the plot to the given path."""
-	
-# 	if log: logger.info(f"Saving plot to: {path}")
-# 	os.makedirs(os.path.dirname(path),exist_ok=True)
-# 	plt.savefig(path)
-	
-# 	return None

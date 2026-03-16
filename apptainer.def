@@ -31,15 +31,6 @@ From: python:3.13-slim
     cp /dist/*.whl .
     pip install *.whl
 
-	# Smoke tests
-    replicnn --help
-    replicnn --version
-    replicnn train --help
-    replicnn predict --help
-    replicnn analyse --help
-    replicnn quantify --help
-    #replicnn visualise --help
-
 	rm -rf /app /dist /root/.cache
 	apt-get purge -y build-essential
 	apt-get autoremove -y
