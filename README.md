@@ -158,39 +158,23 @@ options:
 </details>
 
 <details>
-<summary>replicnn analyse</summary>
+<summary>replicnn oem_rfd</summary>
 
 ```bash
-user@dev:/tmp$ replicnn analyse --help
-usage: RepliCNN analyse [-h] -i INPUT -o OUTPATH [-s1 SMOOTHLOG2] [-s2 SMOOTHRFD] [-nl]
-
-RepliCNN analyse - Analyse a SDF-file for origins of rpelication/initiation zones, termination zones, constant timing regions, timing transition regions, and replication for directionality.
-
-options:
-  -h, --help            show this help message and exit
-  -i INPUT, --input INPUT
-                        Path(-s) to one sdf file.
-  -o OUTPATH, --outpath OUTPATH
-                        Folder where the output should be written to.
-  -s1 SMOOTHLOG2, --smoothlog2 SMOOTHLOG2
-                        Smoothing factor for ORI and TERM identification.
-  -s2 SMOOTHRFD, --smoothrfd SMOOTHRFD
-                        Smoothing factor for TTR and RFD identification
-  -nl, --nolog          Disable logging.
+sleep 1
 ```
 </details>
 
 <details>
-<summary>replicnn visualise (currently not supported)</summary>
+<summary>replicnn ori_ter</summary>
 
 ```bash
-user@dev:/tmp$ replicnn visualise --help
-
+sleep 1
 ```
 </details>
 
 ## Import RepliCNN into a python script/jupyter notebook
-Besides the usage as a command line tool, RepliCNN can also be imported into a python script or jupyter notebook. The results of the commandline  tool and the imported version are equivalent.
+Besides the usage as a command line tool, RepliCNN can also be imported into a python script or jupyter notebook. The results of the commandline tool and the imported version are equivalent.
 
 ```bash
 user@dev:/tmp$ python -c "import replicnn; print(replicnn.__version__)"
@@ -200,21 +184,30 @@ user@dev:/tmp$ python -c "import replicnn; print(replicnn.__version__)"
 ## Getting help
 If you've found a bug, would like to suggest a new feature or you have any issues regarding RepliCNN installation, walkthrough, and output interpretation please open a new [issue](https://github.com/zarnackgroup/replicnn/issues).
 
+## Funding
+This works was funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) via project ID 393547839 – SFB 1361, to K.Z., H.D.U., V.R. and M.C.C., via project ID 533767322 – EXC 3113/1, Cluster for Nucleic Acid Sciences and Technologies – NUCLEATE, to K.Z., and via project ID 529989072 – CA 198/20-1, to M.C.C. We gratefully acknowledge the IMB Genomics Core Facility and its NextSeq 2000 sequencer (funded by the DFG – INST 247/870-1 FUGG).
+
 ## Acknowledgements
-Funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) – Project-ID 393547839 – SFB 1361.
+We would like to express our gratitude to the Genomics and Bioinformatics Core Facilities of the IMB gGmbH (Mainz, Germany) for their assistance in sequencing and data processing. We thank Nicolas Delhomme, Maximilian Reuter, Mario Keller and all members of the Zarnack group for helpful discussions.
 
 ## Citing
-If you use RepliCNN in your research, please cite this repository like this:
+If you use RepliCNN in your research, please cite this project like this:
 
-Dominik Stroh, Kathi Zarnack\
-RepliCNN: High-resolution prediction of the spatio-temporal DNA replication program using 1D-CNNs\
-[https://github.com/zarnackgroup/replicnn](https://github.com/zarnackgroup/replicnn)
+RepliCNN: High-resolution inference of the DNA replication program from strand-specific 3′ DNA end sequencing
+Dominik Stroh, Nicola Zilio, Maruthi K. Pabba, Vassilis Roukos, M. Cristina Cardoso, Helle D. Ulrich, Kathi Zarnack
+bioRxiv 2026.03.12.710907; doi: https://doi.org/10.64898/2026.03.12.710907 
 
 BibTex:
 ```bibtex
-@article{replicnn,
-    author = {Stroh, Dominik and Zarnack, Kathi},
-    title = {RepliCNN: High-resolution prediction of the spatio-temporal DNA replication program using 1D-CNNs},
-    url = {https://github.com/zarnackgroup/replicnn},
+@article {Stroh2026.03.12.710907,
+	author = {Stroh, Dominik and Zilio, Nicola and Pabba, Maruthi K. and Roukos, Vassilis and Cardoso, M. Cristina and Ulrich, Helle D. and Zarnack, Kathi},
+	title = {RepliCNN: High-resolution inference of the DNA replication program from strand-specific 3' DNA end sequencing},
+	elocation-id = {2026.03.12.710907},
+	year = {2026},
+	doi = {10.64898/2026.03.12.710907},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2026/03/14/2026.03.12.710907},
+	journal = {bioRxiv}
 }
+
 ```

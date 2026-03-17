@@ -191,11 +191,15 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 		choices=["rfd", "oem"],
 		required=True
 	)
-
 	rfd_oem_parser.add_argument(
 		"-bg", "--bedgraph",
 		help="Write output as bedGraph instead of BigWig.",
 		action="store_true"
+	)
+	rfd_oem_parser.add_argument(
+		"-nd", "--no_norm_depth",
+		help="Do not normalize depth balance.",
+		action="store_false"
 	)
 	rfd_oem_parser.add_argument(
 		"-inv", "--invert",
@@ -203,7 +207,7 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 		action="store_true"
 	)
 
-	# create subparser for module 3: analyse
+	# create subparser for module 3: ori_ter
 	## parser
 	ori_ter_parser: argparse.ArgumentParser = subparsers.add_parser(
 		"ori_ter",
@@ -294,30 +298,30 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 	)
 
 	# create subparser for module 4: quantify
-	## parser
-	quantify_parser: argparse.ArgumentParser = subparsers.add_parser("quantify", 
-																	help="Quantify timing changes.", 
-																	description="RepliCNN quanitfy - Quantify timing changes between two conditions or one condition and a reference.",
-																	)
-	## arguments
-	quantify_parser.add_argument("-c1", "--cond1", 
-								help="List of SDF-files for conditions 1.", 
-								type=str, nargs="+", required=True)
-	quantify_parser.add_argument("-c2", "--cond2", 
-								help="List of SDF-files for conditions 2. Mutually exclusive with reference.", 
-								type=str, nargs="+")
-	quantify_parser.add_argument("-ref", "--reference", 
-								help="Reference timing file. Mutually exclusive with cond2.", 
-								type=str, nargs=1)
-	quantify_parser.add_argument("-a", "--alpha", 
-								help="Alpha threshold for significance testing. Defaults to 0.05.", 
-								type=float, nargs=1)
-	quantify_parser.add_argument("-bed", "--asbedfile", 
-								help="Write output in bed6-format.", 
-								action="store_true")
-	quantify_parser.add_argument("-nl", "--nolog", 
-								help="Disable logging.", 
-								action="store_false")	
+	# ## parser
+	# quantify_parser: argparse.ArgumentParser = subparsers.add_parser("quantify", 
+	# 																help="Quantify timing changes.", 
+	# 																description="RepliCNN quanitfy - Quantify timing changes between two conditions or one condition and a reference.",
+	# 																)
+	# ## arguments
+	# quantify_parser.add_argument("-c1", "--cond1", 
+	# 							help="List of SDF-files for conditions 1.", 
+	# 							type=str, nargs="+", required=True)
+	# quantify_parser.add_argument("-c2", "--cond2", 
+	# 							help="List of SDF-files for conditions 2. Mutually exclusive with reference.", 
+	# 							type=str, nargs="+")
+	# quantify_parser.add_argument("-ref", "--reference", 
+	# 							help="Reference timing file. Mutually exclusive with cond2.", 
+	# 							type=str, nargs=1)
+	# quantify_parser.add_argument("-a", "--alpha", 
+	# 							help="Alpha threshold for significance testing. Defaults to 0.05.", 
+	# 							type=float, nargs=1)
+	# quantify_parser.add_argument("-bed", "--asbedfile", 
+	# 							help="Write output in bed6-format.", 
+	# 							action="store_true")
+	# quantify_parser.add_argument("-nl", "--nolog", 
+	# 							help="Disable logging.", 
+	# 							action="store_false")	
 
 	# create subparser for module 5: visualise
 	## parser
@@ -406,6 +410,7 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 				output_prefix=args.output_prefix,
 				track=args.track,
 				bedgraph=args.bedgraph,
+				norm_depth=args.norm_depth,
 				invert=args.invert,
 			)
 		finally:

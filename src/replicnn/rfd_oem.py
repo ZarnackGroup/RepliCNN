@@ -58,6 +58,7 @@ def _rfd_oem(
 	output_prefix: str,
 	track: str,
 	bedgraph: bool = False,
+	norm_depth: bool = True,
 	invert: bool = True,
 ) -> None:
 	"""
@@ -79,6 +80,8 @@ def _rfd_oem(
 		Either "rfd" or "oem".
 	bedgraph : bool, default=False
 		If True, write `.bg` (bedGraph), else `.bw` (BigWig).
+	norm_depth : bool, default=True
+		If True, normalize depth balance.
 	invert : bool, default=True
 		If True, swap Watson/Crick signals.
 
@@ -102,6 +105,7 @@ def _rfd_oem(
 		resolution=resolution,
 		stride=stride,
 		track=track,
+		norm_depth=norm_depth,
 		invert=invert,
 	)
 
@@ -235,6 +239,7 @@ def rfd_oem(
 	resolution: int,
 	stride: int,
 	track: str,
+	norm_depth: bool = True,
 	invert: bool = True,
 ) -> Dict[str, pd.DataFrame]:
 	"""
@@ -254,6 +259,8 @@ def rfd_oem(
 		Either "rfd" or "oem".
 	invert : bool, default=True
 		If True, swap Watson/Crick signals.
+	norm_depth : bool, default=True
+		If True, normalize depth balance.
 
 	Returns
 	-------
@@ -271,12 +278,13 @@ def rfd_oem(
 				W, C = C, W
 
 			# normalize depth balance
-			W_total, C_total = np.sum(W), np.sum(C)
-			ratio = W_total / (C_total + 1e-15)
-			if ratio > 1:
-				W *= C_total / (W_total + 1e-15)
-			elif ratio < 1:
-				C *= W_total / (C_total + 1e-15)
+			if norm_depth:
+				W_total, C_total = np.sum(W), np.sum(C)
+				ratio = W_total / (C_total + 1e-15)
+				if ratio > 1:
+					W *= C_total / (W_total + 1e-15)
+				elif ratio < 1:
+					C *= W_total / (C_total + 1e-15)
 
 			pos = np.arange(0, size, stride)
 
