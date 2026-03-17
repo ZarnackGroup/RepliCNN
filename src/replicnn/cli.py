@@ -410,7 +410,7 @@ def main(logger:logging.Logger=get_logger(level=logging.DEBUG)) -> None:
 				output_prefix=args.output_prefix,
 				track=args.track,
 				bedgraph=args.bedgraph,
-				norm_depth=args.norm_depth,
+				norm_depth=args.no_norm_depth,
 				invert=args.invert,
 			)
 		finally:
