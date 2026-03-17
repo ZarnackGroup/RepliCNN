@@ -51,25 +51,24 @@ The main way how to use RepliCNN is through its command line interface.
 ### replicnn
 ```bash
 user@dev:/tmp$ replicnn --help
-usage: replicnn [-h] [-v] {prepare,train,predict,analyse,quantify,visualise} ...
+usage: replicnn [-h] [-v] {prepare,train,predict,rfd_oem,ori_ter} ...
 
 RepliCNN - Replication timing prediction and analyses
 
 positional arguments:
-  {prepare,train,predict,analyse,quantify,visualise}
+  {prepare,train,predict,rfd_oem,ori_ter}
                         Commands
     prepare             Prepare data format for this tool.
     train               Train a model.
     predict             Predict timing for file.
-    analyse             Analyse data for characteristics.
-    quantify            Quantify timing changes.
-	visualise			Visualise your results.
+    rfd_oem             Compute RFD or OEM tracks from Watson/Crick BigWig files.
+    ori_ter             Detect replication origins (ORIs) and termination zones (TERMs) from RFD/OEM tracks.
 
 options:
   -h, --help            show this help message and exit
   -v, --version         show program's version number and exit
 ```
-For additional help and documentation, please check out `replicnn --help` or `replicnn {prepare,train,predict,analyse,quantify} --help` or the corresponding publication.
+For additional help and documentation, please check out `replicnn --help` or `replicnn {prepare,train,predict,rfd_oem,ori_ter} --help` or the corresponding publication.
 
 ### Subcommands
 <details>
@@ -77,28 +76,26 @@ For additional help and documentation, please check out `replicnn --help` or `re
 
 ```bash
 user@dev:/tmp$ replicnn prepare --help
-usage: RepliCNN prepare [-h] -fwd FORWARD -rev REVERSE -bs BINSIZE -cs CHROMSIZES -o OUTPATH [-t TIMING] [-i] [-nl]
+usage: replicnn prepare [-h] -fwd FORWARD -rev REVERSE -bs BINSIZE -cs CHROMSIZES -o OUTPATH [-t TIMING] [-i] [-nl]
 
 RepliCNN prepare - Prepare a file in the SDF format for usage in the tool and user specific analyses.
 
 options:
   -h, --help            show this help message and exit
-  -fwd FORWARD, --forward FORWARD
+  -fwd, --forward FORWARD
                         Path to the forward bigWig file.
-  -rev REVERSE, --reverse REVERSE
+  -rev, --reverse REVERSE
                         Path to the reverse bigWig file.
-  -bs BINSIZE, --binsize BINSIZE
+  -bs, --binsize BINSIZE
                         Binsize to use.
-  -cs CHROMSIZES, --chromsizes CHROMSIZES
+  -cs, --chromsizes CHROMSIZES
                         Path to a chromsizes file.
-  -o OUTPATH, --outpath OUTPATH
+  -o, --outpath OUTPATH
                         File where the output should be written to.
-  -t TIMING, --timing TIMING
-                        Path to a timing file.
+  -t, --timing TIMING   Path to a timing file.
   -i, --invert          Invert phasing of the track.
   -nl, --nolog          Disable logging.
 ```
-
 </details>
 
 <details>
@@ -106,33 +103,31 @@ options:
 
 ```bash
 user@dev:/tmp$ replicnn train --help
-usage: RepliCNN train [-h] -i INPUT [INPUT ...] -o OUTPATH [-g] [-ws WINDOWSIZE] [-e EPOCHS] [-bs BATCHSIZE] [-nes] [-v VALIDATIONSPLIT] [-lr LEARNINGRATE] [-cv] [-nl]
+usage: replicnn train [-h] -i INPUT [INPUT ...] -o OUTPATH [-g] [-ws WINDOWSIZE] [-e EPOCHS] [-bs BATCHSIZE] [-nes] [-v VALIDATIONSPLIT] [-lr LEARNINGRATE] [-cv] [-nl]
 
 RepliCNN train - Train a model using SDF-file(s). Model quality can be assessed using the -cv option performing a Leave-One-Chromosome-Out Cross-Validation.
 
 options:
   -h, --help            show this help message and exit
-  -i INPUT [INPUT ...], --input INPUT [INPUT ...]
+  -i, --input INPUT [INPUT ...]
                         Path(-s) to one/multiple sdf file(-s).
-  -o OUTPATH, --outpath OUTPATH
+  -o, --outpath OUTPATH
                         Folder where the model should be written to.
   -g, --gpu             Enables training on gpu. Defaults to False
-  -ws WINDOWSIZE, --windowsize WINDOWSIZE
+  -ws, --windowsize WINDOWSIZE
                         Window size for chunks. Defaults to 201.
-  -e EPOCHS, --epochs EPOCHS
-                        Number of epochs to train for. Defaults to 300.
-  -bs BATCHSIZE, --batchsize BATCHSIZE
+  -e, --epochs EPOCHS   Number of epochs to train for. Defaults to 300.
+  -bs, --batchsize BATCHSIZE
                         Batch size. Defaults to 32.
   -nes, --noearlystopping
                         Whether to inactivate early stopping during training. Defaults to False.
-  -v VALIDATIONSPLIT, --validationsplit VALIDATIONSPLIT
+  -v, --validationsplit VALIDATIONSPLIT
                         Percent of data used as validation. Defaults to 0.1.
-  -lr LEARNINGRATE, --learningrate LEARNINGRATE
+  -lr, --learningrate LEARNINGRATE
                         Learning rate for Adam optimizer. Defaults to 0.001.
   -cv, --crossvalidate  Leave-One-Chromosome-Out Cross-Validation on the given dataset. Only compatible with one SDF-file.
   -nl, --nolog          Disable logging.
 ```
-
 </details>
 
 <details>
@@ -140,17 +135,16 @@ options:
 
 ```bash
 user@dev:/tmp$ replicnn predict --help
-usage: RepliCNN predict [-h] -i INPUT -m MODELPATH [-o OUTPATH] [-g] [-nl]
+usage: replicnn predict [-h] -i INPUT -m MODELPATH [-o OUTPATH] [-g] [-nl]
 
 RepliCNN predict - Predict timing for a SDF-file using a previously trained model.
 
 options:
   -h, --help            show this help message and exit
-  -i INPUT, --input INPUT
-                        Path to one sdf-file.
-  -m MODELPATH, --modelpath MODELPATH
+  -i, --input INPUT     Path to one sdf-file.
+  -m, --modelpath MODELPATH
                         Path to a model file.
-  -o OUTPATH, --outpath OUTPATH
+  -o, --outpath OUTPATH
                         File where the output should be written to.
   -g, --gpu             Enables prediction on gpu. Defaults to False
   -nl, --nolog          Disable logging.
@@ -161,7 +155,27 @@ options:
 <summary>replicnn oem_rfd</summary>
 
 ```bash
-sleep 1
+user@dev:/tmp$ replicnn rfd_oem --help
+usage: replicnn rfd_oem [-h] -w WATSON -c CRICK -cs CHROMSIZES -o OUTPUT_PREFIX -res RESOLUTION -st STRIDE -t {rfd,oem} [-bg] [-nd] [-inv]
+
+RepliCNN analyse - Compute replication fork directionality (RFD) or origin efficiency metric (OEM) from strand-specific BigWig files and write the results as BigWig or bedGraph.
+
+options:
+  -h, --help            show this help message and exit
+  -w, --watson WATSON   Path to Watson strand BigWig file.
+  -c, --crick CRICK     Path to Crick strand BigWig file.
+  -cs, --chromsizes CHROMSIZES
+                        Path to chromosome sizes file.
+  -o, --output_prefix OUTPUT_PREFIX
+                        Prefix for output file(s).
+  -res, --resolution RESOLUTION
+                        Window size in bp.
+  -st, --stride STRIDE  Stride (step size in bp).
+  -t, --track {rfd,oem}
+                        Track to compute: 'rfd' or 'oem'.
+  -bg, --bedgraph       Write output as bedGraph instead of BigWig.
+  -nd, --no_norm_depth  Do not normalize depth balance.
+  -inv, --invert        Swap Watson/Crick signals.
 ```
 </details>
 
@@ -169,7 +183,37 @@ sleep 1
 <summary>replicnn ori_ter</summary>
 
 ```bash
-sleep 1
+user@dev:/tmp$ replicnn ori_ter --help
+usage: replicnn ori_ter [-h] -i INPUT [INPUT ...] -cs CHROMSIZES -o OUTPUT_PREFIX [-si] [-nl] [--ori-threshold ORI_THRESHOLD] [--ter-threshold TER_THRESHOLD] [--window-radius WINDOW_RADIUS] [--max-merge-size MAX_MERGE_SIZE] [--n-evidence N_EVIDENCE] [--smooth-factor-base SMOOTH_FACTOR_BASE] [--cutoff CUTOFF] -er EVAL_RESOLUTION
+
+RepliCNN ori_ter - Detect ORI and TER zones, timing transition regions, and constant timing regions based on RFD/OEM tracks.
+
+options:
+  -h, --help            show this help message and exit
+  -i, --input INPUT [INPUT ...]
+                        Path(s) to RFD/OEM BigWig files.
+  -cs, --chromsizes CHROMSIZES
+                        Path to chromosome sizes file.
+  -o, --output_prefix OUTPUT_PREFIX
+                        Prefix for output file(s).
+  -si, --save_intermediates
+                        Save intermediate candidate and filtering files.
+  -nl, --nolog          Disable debug logging.
+  --ori-threshold ORI_THRESHOLD
+                        Threshold for ORI recentering.
+  --ter-threshold TER_THRESHOLD
+                        Threshold for TER recentering.
+  --window-radius WINDOW_RADIUS
+                        Window radius (bp) for recentering around OEM extrema.
+  --max-merge-size MAX_MERGE_SIZE
+                        Maximum size (bp) for merging candidate regions.
+  --n-evidence N_EVIDENCE
+                        Minimum number of supporting evidences for a candidate.
+  --smooth-factor-base SMOOTH_FACTOR_BASE
+                        Smoothing factor for raw candidate generation.
+  --cutoff CUTOFF       Cutoff for filtering efficiency scores.
+  -er, --eval_resolution EVAL_RESOLUTION
+                        OEM resolution used for recentering and scoring.
 ```
 </details>
 
