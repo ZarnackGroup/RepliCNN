@@ -25,6 +25,7 @@ if __name__=="__main__":
 
 # import packages
 import os
+from pathlib import Path
 import shutil
 import sys
 import typing
@@ -208,6 +209,7 @@ def create_raw_candidates_rfd_oem(
 
 	# --- save raw candidates (BED4 only) ---
 	if out_bed:
+		Path(out_bed).parent.mkdir(parents=True, exist_ok=True)
 		with open(out_bed, "w") as out:
 			for chrom, start, end, name, *_ in raw_candidates:
 				strand = "+" if name.startswith("ORI") else "-"
