@@ -42,7 +42,7 @@ Prepare files for chrI and chrII of GSM3939124:
 for chr in chrI chrII; do
 	replicnn prepare \
 		-fwd GSM3939124.${chr}.fwd.bw \
-		-rev GSM3939124.${chr}.fwd.bw \
+		-rev GSM3939124.${chr}.rev.bw \
 		-bs 500 \
 		-cs sacCer3.${chr}.chrom.sizes \
 		-o GSM3939124.${chr}.tsv \
