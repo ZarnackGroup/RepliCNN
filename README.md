@@ -9,6 +9,9 @@ RepliCNN is a tool for predicting replication timing from GLOE-Seq, TrAEL-Seq, o
 ## Abstract
 During S phase, the genome is replicated in a tightly regulated spatiotemporal order described as DNA replication timing. Discontinuous lagging-strand synthesis produces Okazaki fragments whose strand-specific distribution reflects replication dynamics. Here, we present RepliCNN, a deep-learning framework based on one-dimensional convolutional neural networks to predict replication timing from Okazaki fragment distributions obtained from strand-specific 3′ DNA end sequencing methods such as GLOE-Seq, TrAEL-seq, or OK-Seq. RepliCNN also automatically annotates replication origins, termination zones, replication fork directionality, and origin efficiency genome-wide from a single dataset generated from unsynchronized proliferating cells. Benchmarking on public and in-house human and yeast datasets using leave-one-chromosome-out cross-validation demonstrates high predictive accuracy, enabling comprehensive analyses of replication dynamics from strand-specific DNA 3′ end sequencing data.
 
+## Quick start
+For a minimal example of RepliCNN capabilities, please install the tool as described in [`How to install RepliCNN`](#How-to-install-RepliCNN) and execute the commands on the provided test data in `test_data/README.md`!
+
 ## How to install RepliCNN
 We recommend installing RepliCNN using pip directly from this repository:
 ```bash
@@ -108,7 +111,7 @@ Smaller bin sizes increase resolution but also increase computational requiremen
 The `--chromsizes` file specifies the chromosomes processed by RepliCNN and their lengths.
 
 Chromosome size files can be downloaded from the UCSC Genome Browser:
-https://hgdownload.cse.ucsc.edu/goldenpath/<assembly>/bigZips/<assembly>.chrom.sizes
+`https://hgdownload.cse.ucsc.edu/goldenpath/<assembly>/bigZips/<assembly>.chrom.sizes`
 
 Only chromosomes included in this file will be used by RepliCNN during preprocessing, training, and prediction.
 
@@ -383,7 +386,8 @@ We recommend generating **unbinned** bigWig files, as `replicnn rfd_oem` perform
 
 The `--chromsizes` file specifies the chromosomes and chromosome lengths used for track generation.
 
-Chromosome size files can be obtained from the UCSC Genome Browser: [ "https://hgdownload.cse.ucsc.edu/goldenpath/XXX/bigZips/XXX.chrom.sizes".](https://hgdownload.cse.ucsc.edu/goldenpath/<assembly>/bigZips/<assembly>.chrom.sizes)
+Chromosome size files can be obtained from the UCSC Genome Browser:
+`https://hgdownload.cse.ucsc.edu/goldenpath/<assembly>/bigZips/<assembly>.chrom.sizes`
 
 Only chromosomes included in this file will be processed.
 
@@ -522,7 +526,8 @@ Example: `5 kb` `10 kb` `50 kb` `100 kb`
 
 The `--chromsizes` file specifies the chromosomes and chromosome lengths used during analysis.
 
-Chromosome size files can be obtained from the UCSC Genome Browser: `https://hgdownload.cse.ucsc.edu/goldenpath/<assembly>/bigZips/<assembly>.chrom.sizes`
+Chromosome size files can be obtained from the UCSC Genome Browser:
+`https://hgdownload.cse.ucsc.edu/goldenpath/<assembly>/bigZips/<assembly>.chrom.sizes`
 
 Only chromosomes included in this file are analyzed.
 
