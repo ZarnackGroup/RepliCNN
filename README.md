@@ -6,8 +6,11 @@
 
 RepliCNN is a tool for predicting replication timing from GLOE-Seq, TrAEL-Seq, or OK-Seq data using convolutional neural networks.
 
-## Installation
-We recommend installing RepliCNN using pip:
+## Abstract
+During S phase, the genome is replicated in a tightly regulated spatiotemporal order described as DNA replication timing. Discontinuous lagging-strand synthesis produces Okazaki fragments whose strand-specific distribution reflects replication dynamics. Here, we present RepliCNN, a deep-learning framework based on one-dimensional convolutional neural networks to predict replication timing from Okazaki fragment distributions obtained from strand-specific 3′ DNA end sequencing methods such as GLOE-Seq, TrAEL-seq, or OK-Seq. RepliCNN also automatically annotates replication origins, termination zones, replication fork directionality, and origin efficiency genome-wide from a single dataset generated from unsynchronized proliferating cells. Benchmarking on public and in-house human and yeast datasets using leave-one-chromosome-out cross-validation demonstrates high predictive accuracy, enabling comprehensive analyses of replication dynamics from strand-specific DNA 3′ end sequencing data.
+
+## How to install RepliCNN
+We recommend installing RepliCNN using pip directly from this repository:
 ```bash
 pip install 'replicnn @ git+https://github.com/zarnackgroup/replicnn.git@main'
 ```
@@ -17,25 +20,30 @@ pip install 'replicnn @ git+ssh://git@github.com/zarnackgroup/replicnn.git@main'
 ```
 <summary>Running as container</summary>
 
-You can also use RepliCNN as a Docker/Singularity/Apptainer container. We provide pre-built containers as well as Dockerfiles and Singularity/Apptainer definition files. Ensure that you have Docker/Singularity/Apptainer available in your PATH.
+You can also use RepliCNN as a Docker/Singularity/Apptainer container. We will provide pre-built containers as well as Dockerfiles and Singularity/Apptainer definition files with the first official release. Ensure that you have Docker/Singularity/Apptainer available in your PATH.
 ```bash
 # Using Docker
-user@dev:/tmp$ docker run docker://ghcr.io/zarnackgroup/replicnn:0.1.0 --version
+user@dev:/tmp$ docker run docker://ghcr.io/zarnackgroup/replicnn:1.0.0 --version
 0.1.0
 
 # Using Singularity
-user@dev:/tmp$ singularity run docker://ghcr.io/zarnackgroup/replicnn:0.1.0 --version
+user@dev:/tmp$ singularity run docker://ghcr.io/zarnackgroup/replicnn:1.0.0 --version
 0.1.0
 
 # Using Apptainer
-user@dev:/tmp$ apptainer run docker://ghcr.io/zarnackgroup/replicnn:0.1.0 --version
+user@dev:/tmp$ apptainer run docker://ghcr.io/zarnackgroup/replicnn:1.0.0 --version
 0.1.0
 ```
 </details>
 
-## Commands and how to use them
-The main way how to use RepliCNN is through its command line interface. 
+## What is RepliCNN and how to use it
+The main way how to use RepliCNN is through its command line interface, although RepliCNN can also be used when imported into a python script or jupyter notebook.
+
+The main workflow to generate replication timing predcitions is replicnn prepare -> train -> predict
+The main workflow to genereate Iz and TERM predictions is replicnn oem_rfd -> ori_ter
+
 ### replicnn
+The main way to call RepliCNN after installation is through `replicnn --help`. This will take the user to the main interface from which more subcommands can be called.
 ```bash
 user@dev:/tmp$ replicnn --help
 usage: replicnn [-h] [-v] {prepare,train,predict,rfd_oem,ori_ter} ...
@@ -49,7 +57,7 @@ positional arguments:
     train               Train a model.
     predict             Predict timing for file.
     rfd_oem             Compute RFD or OEM tracks from Watson/Crick BigWig files.
-    ori_ter             Detect replication origins (ORIs) and termination zones (TERMs) from RFD/OEM tracks.
+    ori_ter             Detect replication origins (ORI) and termination zones (TER) from RFD/OEM tracks.
 
 options:
   -h, --help            show this help message and exit
@@ -62,20 +70,78 @@ Below you will find more detailled explanation of the subcommands, their argumen
 
 <details>
 <summary>replicnn prepare</summary>
-replicnn prepare is used when you want to predict replication timing from 3' end sequencing data. 
+The `replicnn prepare` command converts strand-specific 3′ end sequencing data into the tsv format used by RepliCNN for model training, prediction, and downstream analyses.
 
-Prepare takes the data in bigwig format, split up by forward and reverse strand. The forward/reverse bigwigs can be created from the bam-files using deeptools bamCoverage or a similar tool (we do not recommend binning here).
+This command should be used for sequencing assays from which **replication fork directionality (RFD)** can be calculated, including TrAEL-seq, GLOE-seq, OK-seq, and related methods.
 
-The binsize argument corresponds to the prediction resolution of RepliCNN. We recommend to adjust this based on the used organisms genome size. We recommend to use a resolution such that we end up with 10,000 to 300,000 bins. This corresponds to a binsize of 500 bp for yeast and 10 kb for human and mouse.
+#### Input data
 
-Chromosome sizes as they can be found in "https://hgdownload.cse.ucsc.edu/goldenpath/XXX/bigZips/XXX.chrom.sizes". The file should only include the chromosomes that should be used by the tool. Here is the point to adjust which chromosomes should be used for training and prediction.
+RepliCNN expects two strand-specific **bigWig** files:
 
-The outpath should be a path to a file where the results should be written to.
+- **Forward strand** (`--forward`)
+- **Reverse strand** (`--reverse`)
 
-The phasing parameter invert needs to be adjusted depending on the type of experiment used. The data needs to. be oriented such that in RFD tracks the sign switch from negative to positive corresponds to an ORI/IZ.
+These files can be generated from aligned BAM files using tools such as [`bamCoverage`](https://deeptools.readthedocs.io/en/develop/content/tools/bamCoverage.html) from deepTools or equivalent software.
 
-The timing file is in bedgraph format and corresponds to the gold standard timing that is used in RepliCNN during training. The data binsize does not need to directly correspond to the prepare binsize. Differences are interpolated. This parameter is optional.
+We recommend generating **unbinned** bigWig files, as RepliCNN performs the binning internally.
 
+#### Choosing the bin size
+
+The `--binsize` parameter determines the prediction resolution of RepliCNN.
+
+As a general guideline, choose a bin size that results in approximately **10,000–300,000 genomic bins** across the genome of interest.
+
+Typical values are:
+
+| Organism | Recommended bin size |
+|----------|----------------------:|
+| *S. cerevisiae* | 500 bp |
+| *H. sapiens* | 10 kb |
+| *M. musculus* | 10 kb |
+
+Smaller bin sizes increase resolution but also increase computational requirements.
+
+#### Chromosome sizes
+
+The `--chromsizes` file specifies the chromosomes processed by RepliCNN and their lengths.
+
+Chromosome size files can be downloaded from the UCSC Genome Browser:
+https://hgdownload.cse.ucsc.edu/goldenpath/<assembly>/bigZips/<assembly>.chrom.sizes
+
+Only chromosomes included in this file will be used by RepliCNN during preprocessing, training, and prediction.
+
+This allows users to define which chromosomes should be included and exclude unwanted sequences such as mitochondrial DNA or unplaced contigs.
+
+#### Output
+
+The `--outpath` argument specifies the output tsv file generated by `replicnn prepare`.
+
+The resulting tsv file contains the processed strand-specific signal, calculated replication fork directionality, and (if provided) replication timing information.
+
+#### Replication timing input (optional)
+
+The `--timing` argument accepts a replication timing file in **bedGraph** format.
+
+This file represents the experimentally determined replication timing values used as the training target for RepliCNN.
+
+The resolution of the timing file does **not** need to match the selected `--binsize`. If necessary, RepliCNN interpolates the timing values to match the requested prediction resolution.
+
+This parameter is optional and is not required when preparing data only for prediction.
+
+#### RFD orientation and phasing
+
+Depending on the experimental protocol, the calculated replication fork directionality (RFD) profile may have an inverted orientation.
+
+The `--invert` option can be used to reverse the polarity of the RFD track.
+
+After preprocessing, the RFD profile should be oriented such that by convention:
+
+- replication origins / initiation zones correspond to transitions from **negative to positive** RFD values
+- termination zones correspond to transitions from **positive to negative** RFD values
+
+Correct orientation is important for accurate prediction of replication timing and initiation zones.
+
+#### Command-line reference
 ```bash
 user@dev:/tmp$ replicnn prepare --help
 usage: replicnn prepare [-h] -fwd FORWARD -rev REVERSE -bs BINSIZE -cs CHROMSIZES -o OUTPATH [-t TIMING] [-i] [-nl]
@@ -98,32 +164,104 @@ options:
   -i, --invert          Invert phasing of the track.
   -nl, --nolog          Disable logging.
 ```
+
+#### Example:
+```bash
+replicnn prepare \
+    --forward sample_forward.bw \
+    --reverse sample_reverse.bw \
+    --binsize 10000 \
+    --chromsizes hg38.chrom.sizes \
+    --timing replication_timing.bedgraph \
+    --outpath sample.tsv
+```
 </details>
 
 <details>
 <summary>replicnn train</summary>
-RepliCNN train is used to train a model for predicting replication timing.
+The `replicnn train` command is used to train a RepliCNN neural network model for predicting replication timing.
 
-The input is one or multiple files from the prepare step.
+The input consists of one or multiple **SDF files** generated using [`replicnn prepare`](#replicnn-prepare). During training, RepliCNN learns the relationship between replication fork directionality (RFD) profiles and experimentally measured replication timing.
 
-The outpath gives a folder were the Keras model is saved to.
+#### Input data
 
-The GPU parameter enables model training on the GPU, if it is available. Availability is logged. GPU training greatly increases training speed and is highly recommended.
+The `--input` parameter accepts one or multiple SDF files.
 
-The windowsize parameter defines how many adjacent windows around the to-be-predicted bin are used as context window. Needs to be the same as for the prediction.
+Multiple SDF files can be used to train a model across different datasets or biological conditions. The input files should contain compatible genome assemblies and preprocessing parameters.
 
-The epochs tel how many training rounds are done of the data. It is advisable to keep this parameter at its default 300.
+#### Output
 
-The batchsize parameter tells how many records are used at once. The larger the GPUs mempry, the larger this parameter can be.
+The `--outpath` parameter specifies the directory where the trained Keras model and associated training outputs are stored.
 
-The NoEarlyStopping parameter disables early stopping during model training. EarlyStopping tries to prevent overtraining/overfittign of the model. It is highly advisable to keep early stopping enabled.
+#### GPU acceleration
 
-The validation split gives the amount of data in percent which is heldout during training to estimate model performance.
+The `--gpu` option enables GPU-based model training if a compatible GPU is available.
 
-The learning rate passes the parameter to the neural networks optimiser.
+GPU availability is automatically checked and reported in the log output.
 
-The Crossvalidation parameter implements the Leave-One-Chromosome-Out Cross validation (LOCO-CV) as described in the publication.
+Training on a GPU substantially reduces training time and is highly recommended.
 
+#### Model parameters
+
+#### Window size
+
+The `--windowsize` parameter defines the number of neighboring genomic bins used as input context for predicting the replication timing of a given bin.
+
+The window size determines how much local genomic information is provided to the model.
+
+The same window size must be used during both training and prediction.
+
+The default value is: `201`
+
+#### Epochs
+
+The `--epochs` parameter defines the number of training iterations over the complete training dataset.
+
+The default value is: `300`
+
+In most cases, the default value should be retained.
+
+#### Batch size
+
+The `--batchsize` parameter specifies the number of training samples processed simultaneously during model optimization.
+
+Larger batch sizes can improve training speed but require more GPU memory.
+
+The default value is: `32`
+
+#### Early stopping
+
+By default, RepliCNN uses early stopping during training to prevent overfitting.
+
+The `--noearlystopping` option disables this behaviour.
+
+Disabling early stopping is generally **not recommended**, as it may lead to reduced model generalization performance.
+
+#### Validation split
+
+The `--validationsplit` parameter defines the fraction of the training data held out for validation during training.
+
+The validation set is not used for parameter optimization and is used to monitor model performance and detect overfitting.
+
+The default value is: `0.1` (10%)
+
+#### Learning rate
+
+The `--learningrate` parameter controls the learning rate of the neural network optimizer.
+
+RepliCNN uses the Adam optimizer.
+
+The default value is: `0.001`
+
+#### Cross-validation
+
+The `--crossvalidate` option performs **Leave-One-Chromosome-Out Cross-Validation (LOCO-CV)** as described in the RepliCNN publication.
+
+During LOCO-CV, one chromosome is excluded from training and used as an independent test set. This procedure provides an unbiased estimate of model performance on unseen genomic regions.
+
+LOCO-CV currently requires a single tsv input file.
+
+#### Command-line reference
 ```bash
 user@dev:/tmp$ replicnn train --help
 usage: replicnn train [-h] -i INPUT [INPUT ...] -o OUTPATH [-g] [-ws WINDOWSIZE] [-e EPOCHS] [-bs BATCHSIZE] [-nes] [-v VALIDATIONSPLIT] [-lr LEARNINGRATE] [-cv] [-nl]
@@ -151,19 +289,49 @@ options:
   -cv, --crossvalidate  Leave-One-Chromosome-Out Cross-Validation on the given dataset. Only compatible with one SDF-file.
   -nl, --nolog          Disable logging.
 ```
+
+#### Example
+```bash
+replicnn train \
+    --input sample.tsv \
+    --outpath trained_model \
+    --gpu \
+    --windowsize 201 \
+    --epochs 300
+```
 </details>
 
 <details>
 <summary>replicnn predict</summary>
+The `replicnn predict` command is used to predict replication timing from an tsv file using a previously trained RepliCNN model.
 
-Predict is used after train created a model. Predict does the prediction of replication timing.
+The model must first be generated using [`replicnn train`](#replicnn-train). The input tsv file should be generated using [`replicnn prepare`](#replicnn-prepare) with the same preprocessing parameters used during model training.
 
-Modelpath gives the path of the saved model.
+#### Input data
 
-Outpath specifies where to save the output.
+The `--input` parameter specifies the SDF file for which replication timing should be predicted.
 
-GPU enables predicion on GPU. Highly recommended as it speeds up inference time strongly.
+The input data must contain the same type of strand-specific replication fork directionality (RFD) information and preprocessing resolution used during model training.
 
+#### Model
+
+The `--modelpath` parameter specifies the path to the trained RepliCNN model.
+
+The model file is generated by [`replicnn train`](#replicnn-train) and contains the learned neural network parameters required for prediction.
+
+#### Output
+
+The `--outpath` parameter specifies the file where the predicted replication timing profile should be written.
+
+The output contains the predicted replication timing values at the resolution defined during the `prepare` step.
+
+#### GPU acceleration
+
+The `--gpu` option enables GPU-based prediction if a compatible GPU is available.
+
+GPU acceleration is highly recommended, as it substantially reduces inference time, especially for large genomes or high-resolution predictions.
+
+#### Command-line reference
 ```bash
 user@dev:/tmp$ replicnn predict --help
 usage: replicnn predict [-h] -i INPUT -m MODELPATH [-o OUTPATH] [-g] [-nl]
@@ -180,31 +348,120 @@ options:
   -g, --gpu             Enables prediction on gpu. Defaults to False
   -nl, --nolog          Disable logging.
 ```
+
+#### Example
+```bash
+replicnn predict \
+    --input sample.tsv \
+    --modelpath trained_model.keras \
+    --outpath sample_prediction.tsv \
+    --gpu
+```
 </details>
 
 <details>
 <summary>replicnn oem_rfd</summary>
 
-OEM_RFD is the utility to create replication fork directionality and origin efficiency metric tracks. 
+The `replicnn rfd_oem` command is a utility for calculating **replication fork directionality (RFD)** and **origin efficiency metric (OEM)** tracks from strand-specific sequencing data.
 
-OEM_RFD takes the data in bigwig format, split up by forward and reverse strand. The forward/reverse bigwigs can be created from the bam-files using deeptools bamCoverage or a similar tool (we do not recommend binning here).
+The command takes strand-specific signal tracks in bigWig format and generates genome-wide RFD or OEM profiles for downstream visualization and replication analysis.
 
-Chromosome sizes as they can be found in "https://hgdownload.cse.ucsc.edu/goldenpath/XXX/bigZips/XXX.chrom.sizes".
+#### Input data
 
-Output prefix gives the prefix that should be used for the output files.
+RepliCNN expects two strand-specific **bigWig** files:
 
-Resolution gives the window size around that should be factored into the calculation of the respective track. For details please check the formulas in the publication. We generally recommend to use resolution in the order of 50000, 75000, 100000, and/or 150000 for human and mouse and 2500, 5000, 10000, 15000 for yeast. Smaller resolution provide a finer more detailled view of the replication landscape but are more prone to get biased by noise. Larger resolutions capture more general trends with less detailled views.
+- **Watson strand** (`--watson`)
+- **Crick strand** (`--crick`)
 
-Stride defines the step size of the bigwig file. Stride 1 means that the tracks are calculated on a per nucleotide base. Larger strides make longer steps. This is a tradeoff between resolution and file size. We recommend strides of 1-100 for yeast and 10-1000 for human.
+These files can be generated from aligned BAM files using tools such as [`bamCoverage`](https://deeptools.readthedocs.io/en/develop/content/tools/bamCoverage.html) from deepTools or equivalent software.
 
-Track defines which track type should be generated.
+We recommend generating **unbinned** bigWig files, as `replicnn rfd_oem` performs the required aggregation internally.
 
-Bedgraph defines that the output should be written into bedgraph format instead of bigwig.
+#### Chromosome sizes
 
-NoNormDepth is a parameter to disable depth normalisation. Generally it is expected that the fwd and rev bigwigs have the same signal strength. If this is not the case, RepliCNN adjusts this. This behavior can be disabled.
+The `--chromsizes` file specifies the chromosomes and chromosome lengths used for track generation.
 
-The phasing parameter invert needs to be adjusted depending on the type of experiment used. The data needs to. be oriented such that in RFD tracks the sign switch from negative to positive corresponds to an ORI/IZ.
+Chromosome size files can be obtained from the UCSC Genome Browser: [ "https://hgdownload.cse.ucsc.edu/goldenpath/XXX/bigZips/XXX.chrom.sizes".](https://hgdownload.cse.ucsc.edu/goldenpath/<assembly>/bigZips/<assembly>.chrom.sizes)
 
+Only chromosomes included in this file will be processed.
+
+#### Output
+
+The `--output_prefix` parameter defines the prefix used for the generated output files.
+
+Depending on the selected options, the output is written as either:
+
+- BigWig files (default)
+- bedGraph files (`--bedgraph`)
+
+#### Track type
+
+The `--track` parameter determines which track is calculated:
+
+- `rfd`  
+  Calculate replication fork directionality.
+
+- `oem`  
+  Calculate the origin efficiency metric.
+
+The mathematical definitions of these metrics are described in the RepliCNN publication.
+
+#### Resolution
+
+The `--resolution` parameter defines the genomic window size used for calculating the selected track.
+
+The optimal resolution depends on the organism and the desired level of detail.
+
+Recommended values:
+
+| Organism | Recommended resolutions |
+|----------|------------------------:|
+| *H. sapiens* / *M. musculus* | 50,000–150,000 bp |
+| *S. cerevisiae* | 2,500–15,000 bp |
+
+Smaller resolutions provide a more detailed view of the replication landscape but are more sensitive to sequencing noise.
+
+Larger resolutions capture broader replication patterns with reduced local detail.
+
+#### Stride
+
+The `--stride` parameter defines the step size between consecutive calculated values.
+
+A stride of `1` calculates the track at every nucleotide position. Larger strides reduce output file size and computation time.
+
+Recommended values:
+
+| Organism | Recommended stride |
+|----------|-------------------:|
+| *S. cerevisiae* | 1–100 bp |
+| *H. sapiens* / *M. musculus* | 10–1000 bp |
+
+The choice of stride represents a trade-off between spatial resolution and file size.
+
+#### Strand normalization
+
+By default, RepliCNN normalizes the Watson and Crick strand signal depth.
+
+This assumes that both input tracks have comparable overall signal strength.
+
+The `--no_norm_depth` option disables this normalization.
+
+This option should only be used if the input strand-specific tracks are already depth-balanced.
+
+#### RFD orientation
+
+Depending on the experimental protocol, the calculated RFD profile may have an inverted orientation.
+
+The `--invert` option swaps the Watson and Crick signals.
+
+After processing, RFD tracks should be oriented such that:
+
+- replication origins / initiation zones correspond to transitions from **negative to positive** RFD values
+- termination zones correspond to transitions from **positive to negative** RFD values
+
+Correct orientation is required for consistent interpretation of replication fork directionality.
+
+#### Command-line reference
 ```bash
 user@dev:/tmp$ replicnn rfd_oem --help
 usage: replicnn rfd_oem [-h] -w WATSON -c CRICK -cs CHROMSIZES -o OUTPUT_PREFIX -res RESOLUTION -st STRIDE -t {rfd,oem} [-bg] [-nd] [-inv]
@@ -228,35 +485,113 @@ options:
   -nd, --no_norm_depth  Do not normalize depth balance.
   -inv, --invert        Swap Watson/Crick signals.
 ```
+
+#### Example
+```bash
+replicnn rfd_oem \
+    --watson sample_forward.bw \
+    --crick sample_reverse.bw \
+    --chromsizes hg38.chrom.sizes \
+    --output_prefix sample_rfd \
+    --resolution 100000 \
+    --stride 100 \
+    --track rfd
+```
 </details>
 
 <details>
 <summary>replicnn ori_ter</summary>
 
-ORI_TER is used to analyse origins of replication (ORIs), initiation zones (IZs), and termination zones (TERMs) from OEm and RFD tracks.
+The `replicnn ori_ter` command identifies **replication origins (ORIs)**, **initiation zones (IZs)**, and **termination zones (TERMs)** from replication fork directionality (RFD) and origin efficiency metric (OEM) tracks.
 
-The input of this function are usually multiple RFD and OEM tracks from multiple resolutions. The advantage of multiple resolutions is that fine grained and coarser signatures can be found. This can be adjusted by supplying more higher or more lower resolution tracks.
+The method integrates information from multiple RFD/OEM tracks generated at different resolutions. Using multiple resolutions enables detection of both fine-scale and broad replication patterns, improving the robustness of ORI and TERM identification.
 
-Chromsizes expects a chromsizes file.
+#### Input data
 
-Output prefix gives the prefix of all output files.
+The `--input` parameter accepts one or multiple RFD/OEM BigWig files.
 
-Save intermediates save all intermediate files from this stepwise process.
+Multiple resolutions should generally be provided. Lower-resolution tracks capture broad replication patterns, while higher-resolution tracks allow detection of more localized replication features.
 
-ORI and TER threshold give a percentage of signal that is used for recentering the ORI/TER. E.g. 5% recenters the ORI to the 5% decrease of maximal peak signal. We recommend 0.05 for ORI and 0.15 for TERMs.
+The number and range of resolutions can be adjusted depending on the genome size and the desired level of detail.
 
-Window radius is the radius around the center of the called ORI/TERM candidate to look for a local extremum.
+Example: `5 kb` `10 kb` `50 kb` `100 kb`
 
-Max merge size gives the maximum of basepairs between candidate ORIs/TERMs so they are merged together.
+#### Chromosome sizes
 
-N evidence gives the number of tracks the ORI/TERM needs to be identified in to be considered. This corresponds to the number of resolutions that it has to be found in.
+The `--chromsizes` file specifies the chromosomes and chromosome lengths used during analysis.
 
-Eval resolution is the OEM track resolution that should be used to give each ORI/TERM a score. The score is written as a vale up to 999 with higher values indicating a better OEm score.
+Chromosome size files can be obtained from the UCSC Genome Browser: `https://hgdownload.cse.ucsc.edu/goldenpath/<assembly>/bigZips/<assembly>.chrom.sizes`
 
-Cutoff filters ORI/TERM candidates by a fixed treshold to exclude low quality candidates.
+Only chromosomes included in this file are analyzed.
 
-Smooth factor base give a smoothing parameter that can be used during the spline approximation of finding ORIs/TERMs to smooth out very small signal varieties.
+#### Output
 
+The `--output_prefix` parameter defines the prefix used for all generated output files.
+
+The analysis consists of several sequential processing steps. By default, only the final output files are retained.
+
+The `--save_intermediates` option can be used to save intermediate candidate and filtering files generated during ORI/TERM identification.
+
+#### ORI and TERM detection parameters
+
+##### ORI and TERM thresholds
+
+The `--ori-threshold` and `--ter-threshold` parameters define the signal fraction used for recentering ORI and TERM candidates.
+
+The thresholds describe the fraction of the maximal OEM/RFD signal used to determine the final position of a candidate.
+
+Recommended values:
+
+| Feature | Recommended threshold |
+|---------|----------------------:|
+| ORI | 0.05 |
+| TERM | 0.15 |
+
+For example, an ORI threshold of `0.05` shifts the ORI center to the position where the signal decreases to 5% of the maximum peak signal.
+
+#### Window radius
+
+The `--window-radius` parameter defines the genomic radius around a candidate ORI or TERM region that is searched for a local signal extremum during recentering.
+
+Increasing this value allows larger positional adjustments but may merge nearby events.
+
+#### Candidate merging
+
+The `--max-merge-size` parameter defines the maximum distance between candidate ORI/TERM regions that allows them to be merged.
+
+This prevents closely spaced candidate regions from being treated as independent events.
+
+#### Evidence requirement
+
+The `--n-evidence` parameter defines the minimum number of input tracks in which an ORI or TERM candidate must be detected to be retained.
+
+Because each input track corresponds to a different resolution, this parameter controls how many resolutions must support a candidate.
+
+Higher values increase confidence but may reduce the number of detected events.
+
+#### Evaluation resolution and scoring
+
+The `--eval_resolution` parameter specifies the OEM track resolution used for final ORI/TERM evaluation and scoring.
+
+Each candidate receives an OEM-based score according to bed file specifications ranging from: `0`-`999`
+
+Higher scores indicate stronger OEM support and therefore higher confidence in the detected replication event.
+
+#### Candidate filtering
+
+The `--cutoff` parameter filters candidates based on their OEM score.
+
+Candidates with scores below this threshold are removed from the final output.
+
+#### Smoothing
+
+The `--smooth-factor-base` parameter controls smoothing during spline approximation used for initial candidate detection.
+
+Increasing this value reduces sensitivity to small signal fluctuations and results in smoother candidate profiles.
+
+This can be useful for noisy datasets but may remove weak replication features.
+
+#### Command-line reference
 ```bash
 user@dev:/tmp$ replicnn ori_ter --help
 usage: replicnn ori_ter [-h] -i INPUT [INPUT ...] -cs CHROMSIZES -o OUTPUT_PREFIX [-si] [-nl] [--ori-threshold ORI_THRESHOLD] [--ter-threshold TER_THRESHOLD] [--window-radius WINDOW_RADIUS] [--max-merge-size MAX_MERGE_SIZE] [--n-evidence N_EVIDENCE] [--smooth-factor-base SMOOTH_FACTOR_BASE] [--cutoff CUTOFF] -er EVAL_RESOLUTION
@@ -290,6 +625,15 @@ options:
   -er, --eval_resolution EVAL_RESOLUTION
                         OEM resolution used for recentering and scoring.
 ```
+
+#### Example
+```bash
+replicnn ori_ter \
+    --input rfd_5000.bw oem_5000.bw rfd_10000.bw oem_10000.bw \
+    --chromsizes sacCer3.chrom.sizes \
+    --output_prefix sample_ori_ter \
+    --eval_resolution 10000
+```
 </details>
 
 ## Import RepliCNN into a python script/jupyter notebook
@@ -304,10 +648,10 @@ user@dev:/tmp$ python -c "import replicnn; print(replicnn.__version__)"
 If you've found a bug, would like to suggest a new feature or you have any issues regarding RepliCNN installation, walkthrough, and output interpretation please open a new [issue](https://github.com/zarnackgroup/replicnn/issues).
 
 ## Funding
-This works was funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) via project ID 393547839 – SFB 1361, to K.Z., H.D.U., V.R. and M.C.C., via project ID 533767322 – EXC 3113/1, Cluster for Nucleic Acid Sciences and Technologies – NUCLEATE, to K.Z., and via project ID 529989072 – CA 198/20-1, to M.C.C. We gratefully acknowledge the IMB Genomics Core Facility and its NextSeq 2000 sequencer (funded by the DFG – INST 247/870-1 FUGG).
+This work was funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) via project ID 393547839 – SFB 1361, to K.Z., H.D.U., V.R., S.S. and M.C.C., via project ID 533767322 – EXC 3113/1, NUCLEATE – Cluster for Nucleic Acid Sciences and Technologies, to K.Z., and via project ID 529989072 – CA 198/20-1, to M.C.C. We gratefully acknowledge the IMB Genomics Core Facility and the use of its NextSeq500 (funded by the Deutsche Forschungsgemeinschaft [DFG; German Research Foundation]-INST 247/870-1 Forschungsgroßgeräte [FUGG]) and its NextSeq2000.
 
 ## Acknowledgements
-We would like to express our gratitude to the Genomics and Bioinformatics Core Facilities of the IMB gGmbH (Mainz, Germany) for their assistance in sequencing and data processing. We thank Nicolas Delhomme, Maximilian Reuter, Mario Keller and all members of the Zarnack group for helpful discussions.
+We would like to express our gratitude to the Genomics and Bioinformatics Core Facilities of the IMB gGmbH (Mainz, Germany) for their assistance in the experiment, sequencing and data processing, especially María Camila Fetiva Mora, Giriram Mohana, and Frank Rühle for supporting the HAP1 TrAEL-seq experiment and for preprocessing the HAP1 TrAEL-seq data. We thank Nicolas Delhomme, Maximilian Reuter, Mario Keller, and all members of the Zarnack group for helpful discussions.
 
 ## Citing
 If you use RepliCNN in your research, please cite this project like this:
