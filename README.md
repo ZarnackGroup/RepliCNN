@@ -18,6 +18,8 @@ or
 ```bash
 pip install 'replicnn @ git+ssh://git@github.com/zarnackgroup/replicnn.git@main'
 ```
+
+<details>
 <summary>Running as container</summary>
 
 You can also use RepliCNN as a Docker/Singularity/Apptainer container. We will provide pre-built containers as well as Dockerfiles and Singularity/Apptainer definition files with the first official release. Ensure that you have Docker/Singularity/Apptainer available in your PATH.
